@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: localhost
+    url: jdbc:mysql://localhost:3308/drf?serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -8,7 +8,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: create
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
