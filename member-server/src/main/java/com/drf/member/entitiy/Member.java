@@ -39,4 +39,15 @@ public class Member extends BaseTimeEntity {
     private MemberStatus status;
 
     private LocalDateTime lastLoginAt;
+
+    public static Member create(String email, String password, String name, String phone, LocalDate birthDate) {
+        return Member.builder()
+                .email(email)
+                .password(password)
+                .name(name)
+                .phone(phone)
+                .birthDate(birthDate)
+                .status(MemberStatus.ACTIVE)
+                .build();
+    }
 }

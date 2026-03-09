@@ -10,7 +10,12 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "withdrawn_member_history")
+@Table(
+        name = "withdrawn_member_history",
+        indexes = {
+                @Index(name = "idx_withdrawn_email_rejoin", columnList = "email, rejoin_allowed_at")
+        }
+)
 public class WithdrawnMemberHistory {
 
     @Id
