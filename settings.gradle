@@ -1,0 +1,3 @@
+rootProject.name = 'drf-commerce'
+include 'member-server'
+
