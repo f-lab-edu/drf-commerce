@@ -4,6 +4,7 @@ import com.github.f4b6a3.tsid.TsidCreator;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Getter
 public abstract class BaseEvent<T> {
@@ -16,7 +17,7 @@ public abstract class BaseEvent<T> {
         this.eventId = TsidCreator.getTsid().toString();
         this.eventType = eventType;
         this.payload = payload;
-        this.occurredAt = LocalDateTime.now();
+        this.occurredAt = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
     }
 }
 
