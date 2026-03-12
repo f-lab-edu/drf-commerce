@@ -3,6 +3,7 @@ package com.drf.member.entitiy;
 import com.drf.member.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,5 +50,19 @@ public class Member extends BaseTimeEntity {
                 .birthDate(birthDate)
                 .status(MemberStatus.ACTIVE)
                 .build();
+    }
+
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
+    public void updateProfile(String name, String phone) {
+        if (StringUtils.hasText(name)) {
+            this.name = name;
+        }
+
+        if (StringUtils.hasText(phone)) {
+            this.phone = phone;
+        }
     }
 }

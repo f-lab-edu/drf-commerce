@@ -2,9 +2,11 @@ package com.drf.member.service;
 
 import com.drf.member.common.exception.BusinessException;
 import com.drf.member.common.exception.ErrorCode;
+import com.drf.member.common.model.AuthInfo;
 import com.drf.member.entitiy.Member;
 import com.drf.member.event.signup.MemberSignUpEvent;
 import com.drf.member.model.request.MemberSignUpRequest;
+import com.drf.member.model.request.ProfileUpdateRequest;
 import com.drf.member.repository.MemberRepository;
 import com.drf.member.repository.WithdrawnMemberHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -57,5 +59,13 @@ public class MemberService {
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
+    }
+
+    @Transactional
+    public void updateProfile(ProfileUpdateRequest request, AuthInfo authInfo) {
+        Member member = memberRepository.findById(authInfo.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        member.updateProfile(request.getName(), request.getPhone());
     }
 }

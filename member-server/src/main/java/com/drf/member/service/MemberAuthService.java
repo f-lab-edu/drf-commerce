@@ -13,6 +13,7 @@ import com.drf.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,8 @@ public class MemberAuthService {
     private final JwtProvider jwtProvider;
     private final RefreshTokenStore refreshTokenStore;
 
+
+    @Transactional
     public MemberLoginResponse memberLogin(MemberLoginRequest request) {
         Member member = memberRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
@@ -32,6 +35,8 @@ public class MemberAuthService {
 
         JwtTokenInfo jwtTokenInfo = jwtProvider.generateTokenDetails(member.getId(), Role.USER);
         refreshTokenStore.save(member.getId(), Role.USER, jwtTokenInfo.refreshToken());
+
+        member.updateLastLoginAt();
 
         return new MemberLoginResponse(
                 jwtTokenInfo.accessToken(),

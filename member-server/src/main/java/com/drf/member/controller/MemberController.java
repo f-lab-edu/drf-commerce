@@ -1,16 +1,15 @@
 package com.drf.member.controller;
 
+import com.drf.member.common.model.AuthInfo;
 import com.drf.member.common.model.CommonResponse;
 import com.drf.member.model.request.MemberSignUpRequest;
+import com.drf.member.model.request.ProfileUpdateRequest;
 import com.drf.member.model.response.MemberSignUpResponse;
 import com.drf.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,5 +23,12 @@ public class MemberController {
         MemberSignUpResponse response = new MemberSignUpResponse(memberId);
 
         return ResponseEntity.ok(CommonResponse.success(response));
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<Void> updateProfile(
+            @RequestBody @Valid ProfileUpdateRequest request, AuthInfo authInfo) {
+        memberService.updateProfile(request, authInfo);
+        return ResponseEntity.noContent().build();
     }
 }
