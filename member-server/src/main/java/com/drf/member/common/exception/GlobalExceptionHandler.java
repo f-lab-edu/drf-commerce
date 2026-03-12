@@ -63,6 +63,11 @@ public class GlobalExceptionHandler {
                 .body(CommonResponse.failure(errorCode));
     }
 
+    @ExceptionHandler(UnauthorizedAccessException.class)
+    protected ResponseEntity<CommonResponse<?>> handleUnauthorizedAccessException(UnauthorizedAccessException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
     // 예외
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<CommonResponse<?>> handleException(Exception e) {

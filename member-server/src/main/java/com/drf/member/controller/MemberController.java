@@ -9,15 +9,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/members")
 public class MemberController {
     private final MemberService memberService;
 
-    @PostMapping("/members/signup")
-    public ResponseEntity<CommonResponse<?>> memberSignUp(@RequestBody @Valid MemberSignUpRequest request) {
+    @PostMapping("/signup")
+    public ResponseEntity<CommonResponse<MemberSignUpResponse>> memberSignUp(@RequestBody @Valid MemberSignUpRequest request) {
         Long memberId = memberService.signUp(request);
         MemberSignUpResponse response = new MemberSignUpResponse(memberId);
 

@@ -17,7 +17,7 @@ public class MemberAuthController {
     private final MemberAuthService memberAuthService;
 
     @PostMapping("/members/login")
-    public ResponseEntity<CommonResponse<?>> memberLogin(@RequestBody @Valid MemberLoginRequest request) {
+    public ResponseEntity<CommonResponse<MemberLoginResponse>> memberLogin(@RequestBody @Valid MemberLoginRequest request) {
         MemberLoginResponse response = memberAuthService.memberLogin(request);
         return ResponseEntity.ok(CommonResponse.success(response));
     }
