@@ -1,0 +1,147 @@
+package com.drf.member.service;
+
+import com.drf.member.common.exception.BusinessException;
+import com.drf.member.common.exception.ErrorCode;
+import com.drf.member.common.model.AuthInfo;
+import com.drf.member.entitiy.DeliveryAddress;
+import com.drf.member.entitiy.Member;
+import com.drf.member.model.request.DeliveryAddressCreateRequest;
+import com.drf.member.repository.DeliveryAddressRepository;
+import com.drf.member.repository.MemberRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
+
+@ExtendWith(MockitoExtension.class)
+class DeliveryAddressServiceTest {
+
+    @InjectMocks
+    private DeliveryAddressService deliveryAddressService;
+
+    @Mock
+    private DeliveryAddressRepository deliveryAddressRepository;
+
+    @Mock
+    private MemberRepository memberRepository;
+
+    private Member member;
+
+    @BeforeEach
+    void setUp() {
+        member = Member.builder()
+                .id(1L)
+                .email("test@test.com")
+                .password("encodedPassword")
+                .name("홍길동")
+                .phone("010-1234-5678")
+                .birthDate(LocalDate.of(1990, 1, 1))
+                .build();
+    }
+
+    @Nested
+    @DisplayName("배송지 등록")
+    class Register {
+
+        @Test
+        @DisplayName("첫 번째 배송지면 isDefault가 true로 저장된다")
+        void firstAddress_savedAsDefault() {
+            // given
+            DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
+                    "집", "010-1234-5678", "서울시 중랑구", "101호", "12345", false
+            );
+            AuthInfo authInfo = new AuthInfo(1L);
+
+            given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+            given(deliveryAddressRepository.existsByMember(member)).willReturn(false);
+
+            // when
+            deliveryAddressService.register(request, authInfo);
+
+            // then
+            then(deliveryAddressRepository).should().save(argThat(DeliveryAddress::isDefault));
+        }
+
+        @Test
+        @DisplayName("isDefault가 true면 기존 기본 배송지가 해제된다")
+        void requestDefault_clearsExistingDefault() {
+            // given
+            DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
+                    "회사", "010-1234-5678", "서울시 광진구", "101호", "54321", true
+            );
+            AuthInfo authInfo = new AuthInfo(1L);
+
+            DeliveryAddress existingDefault = DeliveryAddress.builder()
+                    .member(member)
+                    .name("집")
+                    .phone("010-1234-5678")
+                    .address("서울시 중랑구")
+                    .addressDetail("101호")
+                    .zipCode("12345")
+                    .isDefault(true)
+                    .build();
+
+            given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+            given(deliveryAddressRepository.findByMemberAndIsDefaultTrue(member))
+                    .willReturn(Optional.of(existingDefault));
+
+            // when
+            deliveryAddressService.register(request, authInfo);
+
+            // then
+            assertThat(existingDefault.isDefault()).isFalse();
+        }
+
+        @Test
+        @DisplayName("isDefault가 false고 첫 번째 배송지가 아니면 기존 기본 배송지가 유지된다")
+        void notDefault_notFirst_existingDefaultUnchanged() {
+            // given
+            DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
+                    "회사", "010-1234-5678", "서울시 광진구", "101호", "54321", false
+            );
+            AuthInfo authInfo = new AuthInfo(1L);
+
+            given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+            given(deliveryAddressRepository.existsByMember(member)).willReturn(true);
+
+            // when
+            deliveryAddressService.register(request, authInfo);
+
+            // then
+            then(deliveryAddressRepository).should(never()).findByMemberAndIsDefaultTrue(any());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 회원이면 예외가 발생한다")
+        void memberNotFound_throwsException() {
+            // given
+            DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
+                    "집", "010-1234-5678", "서울시 중랑구", "101호", "12345", false
+            );
+            AuthInfo authInfo = new AuthInfo(1L);
+
+            given(memberRepository.findById(1L)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> deliveryAddressService.register(request, authInfo))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+    }
+}
