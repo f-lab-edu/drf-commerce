@@ -6,11 +6,14 @@ import com.drf.member.common.model.AuthInfo;
 import com.drf.member.entitiy.DeliveryAddress;
 import com.drf.member.entitiy.Member;
 import com.drf.member.model.request.DeliveryAddressCreateRequest;
+import com.drf.member.model.response.DeliveryAddressResponse;
 import com.drf.member.repository.DeliveryAddressRepository;
 import com.drf.member.repository.MemberRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -44,5 +47,16 @@ public class DeliveryAddressService {
                 .build();
 
         deliveryAddressRepository.save(deliveryAddress);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeliveryAddressResponse> getDeliveryAddresses(AuthInfo authInfo) {
+        Member member = memberRepository.findById(authInfo.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return deliveryAddressRepository.findByMemberOrderByIdDesc(member)
+                .stream()
+                .map(DeliveryAddressResponse::from)
+                .toList();
     }
 }

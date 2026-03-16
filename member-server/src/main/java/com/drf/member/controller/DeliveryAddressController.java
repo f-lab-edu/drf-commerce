@@ -1,15 +1,16 @@
 package com.drf.member.controller;
 
 import com.drf.member.common.model.AuthInfo;
+import com.drf.member.common.model.CommonResponse;
 import com.drf.member.model.request.DeliveryAddressCreateRequest;
+import com.drf.member.model.response.DeliveryAddressResponse;
 import com.drf.member.service.DeliveryAddressService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,5 +24,11 @@ public class DeliveryAddressController {
             @RequestBody @Valid DeliveryAddressCreateRequest request, AuthInfo authInfo) {
         deliveryAddressService.register(request, authInfo);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<CommonResponse<List<DeliveryAddressResponse>>> getDeliveryAddresses(AuthInfo authInfo) {
+        List<DeliveryAddressResponse> response = deliveryAddressService.getDeliveryAddresses(authInfo);
+        return ResponseEntity.ok(CommonResponse.success(response));
     }
 }

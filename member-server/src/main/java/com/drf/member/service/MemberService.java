@@ -70,7 +70,7 @@ public class MemberService {
         Member member = memberRepository.findById(authInfo.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        return MemberProfileResponse.of(member);
+        return MemberProfileResponse.from(member);
     }
 
     @Transactional

@@ -6,6 +6,7 @@ import com.drf.member.common.model.AuthInfo;
 import com.drf.member.entitiy.DeliveryAddress;
 import com.drf.member.entitiy.Member;
 import com.drf.member.model.request.DeliveryAddressCreateRequest;
+import com.drf.member.model.response.DeliveryAddressResponse;
 import com.drf.member.repository.DeliveryAddressRepository;
 import com.drf.member.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +44,8 @@ class DeliveryAddressServiceTest {
 
     private Member member;
 
+    private AuthInfo authInfo;
+
     @BeforeEach
     void setUp() {
         member = Member.builder()
@@ -52,6 +56,8 @@ class DeliveryAddressServiceTest {
                 .phone("010-1234-5678")
                 .birthDate(LocalDate.of(1990, 1, 1))
                 .build();
+
+        authInfo = new AuthInfo(1L);
     }
 
     @Nested
@@ -65,7 +71,6 @@ class DeliveryAddressServiceTest {
             DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
                     "집", "010-1234-5678", "서울시 중랑구", "101호", "12345", false
             );
-            AuthInfo authInfo = new AuthInfo(1L);
 
             given(memberRepository.findById(1L)).willReturn(Optional.of(member));
             given(deliveryAddressRepository.existsByMember(member)).willReturn(false);
@@ -84,7 +89,6 @@ class DeliveryAddressServiceTest {
             DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
                     "회사", "010-1234-5678", "서울시 광진구", "101호", "54321", true
             );
-            AuthInfo authInfo = new AuthInfo(1L);
 
             DeliveryAddress existingDefault = DeliveryAddress.builder()
                     .member(member)
@@ -133,7 +137,6 @@ class DeliveryAddressServiceTest {
             DeliveryAddressCreateRequest request = new DeliveryAddressCreateRequest(
                     "집", "010-1234-5678", "서울시 중랑구", "101호", "12345", false
             );
-            AuthInfo authInfo = new AuthInfo(1L);
 
             given(memberRepository.findById(1L)).willReturn(Optional.empty());
 
@@ -142,6 +145,76 @@ class DeliveryAddressServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("배송지 목록 조회")
+    class GetDeliverAddress {
+
+        @Test
+        @DisplayName("배달 주소 목록을 최신순으로 반환한다")
+        void getDeliveryAddresses() {
+            // given
+            List<DeliveryAddress> addresses = List.of(
+                    DeliveryAddress.builder()
+                            .member(member)
+                            .name("집")
+                            .phone("010-1234-5678")
+                            .address("서울시 강남구")
+                            .addressDetail("101호")
+                            .zipCode("12345")
+                            .isDefault(true)
+                            .build(),
+                    DeliveryAddress.builder()
+                            .member(member)
+                            .name("회사")
+                            .phone("010-9876-5432")
+                            .address("서울시 서초구")
+                            .addressDetail("202호")
+                            .zipCode("54321")
+                            .isDefault(false)
+                            .build()
+            );
+
+            given(memberRepository.findById(authInfo.id())).willReturn(Optional.of(member));
+            given(deliveryAddressRepository.findByMemberOrderByIdDesc(member)).willReturn(addresses);
+
+            // when
+            List<DeliveryAddressResponse> result = deliveryAddressService.getDeliveryAddresses(authInfo);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).name()).isEqualTo("집");
+            assertThat(result.get(0).isDefault()).isTrue();
+            assertThat(result.get(1).name()).isEqualTo("회사");
+            assertThat(result.get(1).isDefault()).isFalse();
+        }
+
+        @Test
+        @DisplayName("배달 주소가 없으면 빈 리스트를 반환한다")
+        void getDeliveryAddresses_empty() {
+            // given
+            given(memberRepository.findById(authInfo.id())).willReturn(Optional.of(member));
+            given(deliveryAddressRepository.findByMemberOrderByIdDesc(member)).willReturn(List.of());
+
+            // when
+            List<DeliveryAddressResponse> result = deliveryAddressService.getDeliveryAddresses(authInfo);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 회원이면 예외가 발생한다")
+        void getDeliveryAddresses_memberNotFound() {
+            // given
+            given(memberRepository.findById(authInfo.id())).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> deliveryAddressService.getDeliveryAddresses(authInfo))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
         }
     }
 }

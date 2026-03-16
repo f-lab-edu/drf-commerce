@@ -13,7 +13,7 @@ public record MemberProfileResponse(
         LocalDate birthDate,
         MemberStatus status
 ) {
-    public static MemberProfileResponse of(Member member) {
+    public static MemberProfileResponse from(Member member) {
         return new MemberProfileResponse(
                 member.getId(),
                 member.getEmail(),
