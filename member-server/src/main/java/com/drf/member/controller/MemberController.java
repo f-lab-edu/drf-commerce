@@ -1,7 +1,7 @@
 package com.drf.member.controller;
 
-import com.drf.member.common.model.AuthInfo;
-import com.drf.member.common.model.CommonResponse;
+import com.drf.common.model.AuthInfo;
+import com.drf.common.model.CommonResponse;
 import com.drf.member.model.request.MemberSignUpRequest;
 import com.drf.member.model.request.PasswordUpdateRequest;
 import com.drf.member.model.request.ProfileUpdateRequest;

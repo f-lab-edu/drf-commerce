@@ -1,6 +1,6 @@
 package com.drf.member.entitiy;
 
-import com.drf.member.common.entity.BaseTimeEntity;
+import com.drf.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.util.StringUtils;

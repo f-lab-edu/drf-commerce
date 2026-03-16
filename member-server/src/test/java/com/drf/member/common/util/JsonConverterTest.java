@@ -1,6 +1,6 @@
 package com.drf.member.common.util;
 
-import com.drf.member.event.signup.MemberSignUpEvent;
+import com.drf.member.event.MemberSignUpEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

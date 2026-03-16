@@ -1,8 +1,10 @@
 package com.drf.member.event.signup;
 
+import com.drf.common.event.EventTopic;
 import com.drf.member.common.util.JsonConverter;
+import com.drf.member.event.MemberSignUpEvent;
+import com.drf.member.event.handler.MemberSignUpEventHandler;
 import com.drf.member.infrastructure.kafka.KafkaProducer;
-import com.drf.member.infrastructure.kafka.KafkaTopic;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +41,7 @@ class MemberSignUpEventHandlerTest {
 
         // then
         then(kafkaProducer).should().sendMessage(
-                eq(KafkaTopic.MEMBER.getName()),
+                eq(EventTopic.MEMBER.getName()),
                 eq("1"),
                 eq("{\"id\":1}"),
                 any(Runnable.class)

@@ -1,6 +1,6 @@
 package com.drf.member.infrastructure.redis;
 
-import com.drf.member.common.auth.Role;
+import com.drf.common.model.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;

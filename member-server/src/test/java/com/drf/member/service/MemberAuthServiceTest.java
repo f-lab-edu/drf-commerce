@@ -2,8 +2,6 @@ package com.drf.member.service;
 
 import com.drf.member.common.auth.JwtProvider;
 import com.drf.member.common.auth.JwtTokenInfo;
-import com.drf.member.common.auth.Role;
-import com.drf.member.common.exception.BusinessException;
 import com.drf.member.common.exception.ErrorCode;
 import com.drf.member.common.model.AuthInfo;
 import com.drf.member.entitiy.Member;

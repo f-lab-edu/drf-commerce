@@ -1,6 +1,5 @@
 package com.drf.member.controller;
 
-import com.drf.member.common.exception.BusinessException;
 import com.drf.member.common.exception.ErrorCode;
 import com.drf.member.model.request.MemberLoginRequest;
 import com.drf.member.model.response.MemberLoginResponse;
@@ -17,7 +16,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;

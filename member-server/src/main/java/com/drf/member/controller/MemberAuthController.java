@@ -1,7 +1,7 @@
 package com.drf.member.controller;
 
-import com.drf.member.common.model.AuthInfo;
-import com.drf.member.common.model.CommonResponse;
+import com.drf.common.model.AuthInfo;
+import com.drf.common.model.CommonResponse;
 import com.drf.member.model.request.MemberLoginRequest;
 import com.drf.member.model.request.TokenRefreshRequest;
 import com.drf.member.model.response.MemberLoginResponse;

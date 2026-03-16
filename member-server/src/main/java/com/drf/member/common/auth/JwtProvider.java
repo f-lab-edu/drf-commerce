@@ -1,5 +1,6 @@
 package com.drf.member.common.auth;
 
+import com.drf.common.model.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

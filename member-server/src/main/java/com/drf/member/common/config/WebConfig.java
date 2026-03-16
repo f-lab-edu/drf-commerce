@@ -1,7 +1,7 @@
 package com.drf.member.common.config;
 
-import com.drf.member.common.interceptor.RoleCheckInterceptor;
-import com.drf.member.common.resolver.AuthInfoResolver;
+import com.drf.common.interceptor.RoleCheckInterceptor;
+import com.drf.common.resolver.AuthInfoResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;

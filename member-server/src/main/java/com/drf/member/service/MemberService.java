@@ -1,12 +1,12 @@
 package com.drf.member.service;
 
-import com.drf.member.common.exception.BusinessException;
+import com.drf.common.exception.BusinessException;
+import com.drf.common.model.AuthInfo;
 import com.drf.member.common.exception.ErrorCode;
-import com.drf.member.common.model.AuthInfo;
 import com.drf.member.entitiy.Member;
 import com.drf.member.entitiy.MemberStatus;
 import com.drf.member.entitiy.WithdrawnMemberHistory;
-import com.drf.member.event.signup.MemberSignUpEvent;
+import com.drf.member.event.MemberSignUpEvent;
 import com.drf.member.model.request.MemberSignUpRequest;
 import com.drf.member.model.request.PasswordUpdateRequest;
 import com.drf.member.model.request.ProfileUpdateRequest;
