@@ -30,10 +30,11 @@ public class DeliveryAddressService {
         Member member = memberRepository.findById(authInfo.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        boolean isDefault = request.isDefault() || !deliveryAddressRepository.existsByMember(member);
+        // 기본 배송지 요청 혹은 첫 등록
+        boolean isDefault = request.isDefault() || !deliveryAddressRepository.existsByMemberId(authInfo.id());
 
         if (isDefault) {
-            deliveryAddressRepository.findByMemberAndIsDefaultTrue(member)
+            deliveryAddressRepository.findByMemberIdAndIsDefaultTrue(authInfo.id())
                     .ifPresent(DeliveryAddress::unmarkDefault);
         }
 
@@ -52,10 +53,7 @@ public class DeliveryAddressService {
 
     @Transactional(readOnly = true)
     public List<DeliveryAddressResponse> getDeliveryAddresses(AuthInfo authInfo) {
-        Member member = memberRepository.findById(authInfo.id())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        return deliveryAddressRepository.findByMemberOrderByIdDesc(member)
+        return deliveryAddressRepository.findByMemberIdOrderByIdDesc(authInfo.id())
                 .stream()
                 .map(DeliveryAddressResponse::from)
                 .toList();
@@ -63,15 +61,11 @@ public class DeliveryAddressService {
 
     @Transactional
     public void updateDeliveryAddress(Long addressId, DeliveryAddressUpdateRequest request, AuthInfo authInfo) {
-        DeliveryAddress deliveryAddress = deliveryAddressRepository.findById(addressId)
+        DeliveryAddress deliveryAddress = deliveryAddressRepository.findByIdAndMemberId(addressId, authInfo.id())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DELIVERY_ADDRESS_NOT_FOUND));
 
-        if (!deliveryAddress.getMember().getId().equals(authInfo.id())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         if (request.isDefault()) {
-            deliveryAddressRepository.findByMemberAndIsDefaultTrue(deliveryAddress.getMember())
+            deliveryAddressRepository.findByMemberIdAndIsDefaultTrue(authInfo.id())
                     .ifPresent(DeliveryAddress::unmarkDefault);
         }
 

@@ -86,7 +86,7 @@ class DeliveryAddressServiceTest {
             );
 
             given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-            given(deliveryAddressRepository.existsByMember(member)).willReturn(false);
+            given(deliveryAddressRepository.existsByMemberId(authInfo.id())).willReturn(false);
 
             // when
             deliveryAddressService.addDeliverAddress(request, authInfo);
@@ -114,7 +114,7 @@ class DeliveryAddressServiceTest {
                     .build();
 
             given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-            given(deliveryAddressRepository.findByMemberAndIsDefaultTrue(member))
+            given(deliveryAddressRepository.findByMemberIdAndIsDefaultTrue(authInfo.id()))
                     .willReturn(Optional.of(existingDefault));
 
             // when
@@ -134,13 +134,13 @@ class DeliveryAddressServiceTest {
             AuthInfo authInfo = new AuthInfo(1L);
 
             given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-            given(deliveryAddressRepository.existsByMember(member)).willReturn(true);
+            given(deliveryAddressRepository.existsByMemberId(authInfo.id())).willReturn(true);
 
             // when
             deliveryAddressService.addDeliverAddress(request, authInfo);
 
             // then
-            then(deliveryAddressRepository).should(never()).findByMemberAndIsDefaultTrue(any());
+            then(deliveryAddressRepository).should(never()).findByMemberIdAndIsDefaultTrue(any());
         }
 
         @Test
@@ -190,8 +190,7 @@ class DeliveryAddressServiceTest {
                             .build()
             );
 
-            given(memberRepository.findById(authInfo.id())).willReturn(Optional.of(member));
-            given(deliveryAddressRepository.findByMemberOrderByIdDesc(member)).willReturn(addresses);
+            given(deliveryAddressRepository.findByMemberIdOrderByIdDesc(authInfo.id())).willReturn(addresses);
 
             // when
             List<DeliveryAddressResponse> result = deliveryAddressService.getDeliveryAddresses(authInfo);
@@ -208,26 +207,13 @@ class DeliveryAddressServiceTest {
         @DisplayName("배달 주소가 없으면 빈 리스트를 반환한다")
         void getDeliveryAddresses_empty() {
             // given
-            given(memberRepository.findById(authInfo.id())).willReturn(Optional.of(member));
-            given(deliveryAddressRepository.findByMemberOrderByIdDesc(member)).willReturn(List.of());
+            given(deliveryAddressRepository.findByMemberIdOrderByIdDesc(authInfo.id())).willReturn(List.of());
 
             // when
             List<DeliveryAddressResponse> result = deliveryAddressService.getDeliveryAddresses(authInfo);
 
             // then
             assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("존재하지 않는 회원이면 예외가 발생한다")
-        void getDeliveryAddresses_memberNotFound() {
-            // given
-            given(memberRepository.findById(authInfo.id())).willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> deliveryAddressService.getDeliveryAddresses(authInfo))
-                    .isInstanceOf(BusinessException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
         }
     }
 
@@ -257,7 +243,7 @@ class DeliveryAddressServiceTest {
             DeliveryAddressUpdateRequest request = new DeliveryAddressUpdateRequest(
                     "회사", "010-9876-5432", "서울시 서초구", "202호", "54321", false);
 
-            given(deliveryAddressRepository.findById(1L)).willReturn(Optional.of(deliveryAddress));
+            given(deliveryAddressRepository.findByIdAndMemberId(1L, authInfo.id())).willReturn(Optional.of(deliveryAddress));
 
             // when
             deliveryAddressService.updateDeliveryAddress(1L, request, authInfo);
@@ -284,8 +270,8 @@ class DeliveryAddressServiceTest {
                     .isDefault(true)
                     .build();
 
-            given(deliveryAddressRepository.findById(1L)).willReturn(Optional.of(deliveryAddress));
-            given(deliveryAddressRepository.findByMemberAndIsDefaultTrue(member)).willReturn(Optional.of(previousDefault));
+            given(deliveryAddressRepository.findByIdAndMemberId(1L, authInfo.id())).willReturn(Optional.of(deliveryAddress));
+            given(deliveryAddressRepository.findByMemberIdAndIsDefaultTrue(authInfo.id())).willReturn(Optional.of(previousDefault));
 
             // when
             deliveryAddressService.updateDeliveryAddress(1L, request, authInfo);
@@ -301,31 +287,13 @@ class DeliveryAddressServiceTest {
             DeliveryAddressUpdateRequest request = new DeliveryAddressUpdateRequest(
                     "집", "010-1234-5678", "서울시 강남구", "101호", "12345", false);
 
-            given(deliveryAddressRepository.findById(1L)).willReturn(Optional.empty());
+            given(deliveryAddressRepository.findByIdAndMemberId(1L, authInfo.id())).willReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> deliveryAddressService.updateDeliveryAddress(1L, request, authInfo))
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.DELIVERY_ADDRESS_NOT_FOUND);
-        }
-
-        @Test
-        @DisplayName("본인 배송지가 아니면 예외가 발생한다")
-        void updateDeliveryAddress_forbidden() {
-            // given
-            DeliveryAddressUpdateRequest request = new DeliveryAddressUpdateRequest(
-                    "집", "010-1234-5678", "서울시 강남구", "101호", "12345", false);
-
-            AuthInfo otherAuthInfo = new AuthInfo(999L);
-
-            given(deliveryAddressRepository.findById(1L)).willReturn(Optional.of(deliveryAddress));
-
-            // when & then
-            assertThatThrownBy(() -> deliveryAddressService.updateDeliveryAddress(1L, request, otherAuthInfo))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.FORBIDDEN);
         }
     }
 
