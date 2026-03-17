@@ -1,3 +1,4 @@
 rootProject.name = 'drf-commerce'
 include 'common-module'
 include 'member-server'
+include 'product-server'

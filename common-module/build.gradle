@@ -9,11 +9,8 @@ dependencyManagement {
 }
 
 dependencies {
-    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.4'
-
     api 'org.springframework.boot:spring-boot-starter-web'
     api 'org.springframework.boot:spring-boot-starter-validation'
     api 'org.springframework.boot:spring-boot-starter-data-jpa'
     api 'org.springframework.kafka:spring-kafka'
-    api 'com.github.f4b6a3:tsid-creator:5.2.6'
 }
