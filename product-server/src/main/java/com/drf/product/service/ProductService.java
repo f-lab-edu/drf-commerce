@@ -5,8 +5,10 @@ import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
 import com.drf.product.entity.ProductStock;
-import com.drf.product.event.CreateProductEvent;
+import com.drf.product.event.ProductCreatedEvent;
+import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductCreateRequest;
+import com.drf.product.model.request.ProductUpdateRequest;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
 import com.drf.product.repository.ProductStockRepository;
@@ -41,9 +43,36 @@ public class ProductService {
         ProductStock productStock = ProductStock.create(savedProduct, request.stock());
         productStockRepository.save(productStock);
 
-        eventPublisher.publishEvent(new CreateProductEvent(savedProduct.getId(), request.stock()));
+        eventPublisher.publishEvent(new ProductCreatedEvent(savedProduct.getId(), request.stock()));
 
         return savedProduct.getId();
+    }
+
+    @Transactional
+    public void updateProduct(long id, ProductUpdateRequest request) {
+        validateDateRange(request.saleStartAt(), request.saleEndAt());
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (request.stock() != null) {
+            ProductStock productStock = productStockRepository.findById(id)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+            productStock.updateStock(request.stock());
+            eventPublisher.publishEvent(new ProductUpdatedEvent(product.getId(), request.stock()));
+        }
+
+        Category category = null;
+        if (request.categoryId() != null) {
+            category = categoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+        }
+
+        product.updateProduct(
+                category, request.name(), request.price(), request.description(),
+                request.discountRate(), request.saleStartAt(), request.saleEndAt()
+        );
     }
 
     private void validateDateRange(LocalDateTime startAt, LocalDateTime endAt) {

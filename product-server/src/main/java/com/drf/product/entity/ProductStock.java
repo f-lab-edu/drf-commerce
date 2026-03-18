@@ -38,4 +38,8 @@ public class ProductStock {
                 .stock(stock)
                 .build();
     }
+
+    public void updateStock(int stock) {
+        this.stock = stock;
+    }
 }

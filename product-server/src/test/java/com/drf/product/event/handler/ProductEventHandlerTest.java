@@ -1,6 +1,7 @@
 package com.drf.product.event.handler;
 
-import com.drf.product.event.CreateProductEvent;
+import com.drf.product.event.ProductCreatedEvent;
+import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.repository.ProductStockRedisRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,10 +25,23 @@ class ProductEventHandlerTest {
     @DisplayName("상품 생성 이벤트 수신 시 Redis에 재고를 저장한다")
     void handleCreateProductEvent() {
         // given
-        CreateProductEvent event = new CreateProductEvent(1L, 100);
+        ProductCreatedEvent event = new ProductCreatedEvent(1L, 100);
 
         // when
-        productEventHandler.handleCreateProductEvent(event);
+        productEventHandler.handleCreatedProductEvent(event);
+
+        // then
+        then(productStockRedisRepository).should().setStock(1L, 100);
+    }
+
+    @Test
+    @DisplayName("상품 수정 이벤트 수신 시 Redis에 재고를 저장한다")
+    void handleUpdateProductEvent() {
+        // given
+        ProductUpdatedEvent event = new ProductUpdatedEvent(1L, 100);
+
+        // when
+        productEventHandler.handleUpdatedProductEvent(event);
 
         // then
         then(productStockRedisRepository).should().setStock(1L, 100);

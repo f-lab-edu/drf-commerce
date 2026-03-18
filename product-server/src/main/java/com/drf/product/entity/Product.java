@@ -3,6 +3,7 @@ package com.drf.product.entity;
 import com.drf.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -56,5 +57,16 @@ public class Product extends BaseTimeEntity {
                 .saleStartAt(saleStartAt)
                 .saleEndAt(saleEndAt)
                 .build();
+    }
+
+    public void updateProduct(Category category, String name, Integer price, String description,
+                              Integer discountRate, LocalDateTime saleStartAt, LocalDateTime saleEndAt) {
+        if (category != null) this.category = category;
+        if (StringUtils.hasText(name)) this.name = name;
+        if (price != null) this.price = price;
+        if (StringUtils.hasText(description)) this.description = description;
+        if (discountRate != null) this.discountRate = discountRate;
+        if (saleStartAt != null) this.saleStartAt = saleStartAt;
+        if (saleEndAt != null) this.saleEndAt = saleEndAt;
     }
 }

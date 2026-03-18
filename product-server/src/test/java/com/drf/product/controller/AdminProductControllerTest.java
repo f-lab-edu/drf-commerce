@@ -1,6 +1,7 @@
 package com.drf.product.controller;
 
 import com.drf.product.model.request.ProductCreateRequest;
+import com.drf.product.model.request.ProductUpdateRequest;
 import com.drf.product.service.ProductService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,6 +53,33 @@ public class AdminProductControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.id").value(1L));
+        }
+    }
+
+    @Nested
+    @DisplayName("상품 수정")
+    class UpdateProduct {
+
+        @Test
+        @DisplayName("수정 성공")
+        void updateProduct_success() throws Exception {
+            ProductUpdateRequest request = ProductUpdateRequest.builder()
+                    .categoryId(2L)
+                    .name("신규 상품명")
+                    .stock(100)
+                    .price(10000)
+                    .description("상품 설명")
+                    .discountRate(10)
+                    .saleStartAt(LocalDateTime.of(2026, 3, 1, 0, 0, 0))
+                    .saleEndAt(LocalDateTime.of(2026, 4, 1, 0, 0, 0))
+                    .build();
+
+            mockMvc.perform(patch("/admin/products/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN")
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNoContent());
         }
     }
 }

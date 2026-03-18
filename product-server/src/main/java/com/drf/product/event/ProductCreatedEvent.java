@@ -2,9 +2,9 @@ package com.drf.product.event;
 
 import com.drf.common.event.BaseEvent;
 
-public class CreateProductEvent extends BaseEvent<CreateProductEvent.Payload> {
+public class ProductCreatedEvent extends BaseEvent<ProductCreatedEvent.Payload> {
 
-    public CreateProductEvent(long id, int stock) {
+    public ProductCreatedEvent(long id, int stock) {
         super(ProductEventType.CREATE_PRODUCT.name(), new Payload(id, stock));
     }
 

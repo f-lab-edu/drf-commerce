@@ -6,8 +6,10 @@ import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
 import com.drf.product.entity.ProductStatus;
 import com.drf.product.entity.ProductStock;
-import com.drf.product.event.CreateProductEvent;
+import com.drf.product.event.ProductCreatedEvent;
+import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductCreateRequest;
+import com.drf.product.model.request.ProductUpdateRequest;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
 import com.drf.product.repository.ProductStockRepository;
@@ -102,7 +104,7 @@ public class ProductServiceTest {
             then(categoryRepository).should().findById(request.categoryId());
             then(productRepository).should().save(any(Product.class));
             then(productStockRepository).should().save(any(ProductStock.class));
-            then(eventPublisher).should().publishEvent(any(CreateProductEvent.class));
+            then(eventPublisher).should().publishEvent(any(ProductCreatedEvent.class));
         }
 
         @Test
@@ -142,6 +144,107 @@ public class ProductServiceTest {
 
             then(productRepository).should(never()).save(any());
             then(productStockRepository).should(never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("상품 수정")
+    class UpdateProduct {
+        private ProductUpdateRequest request;
+        private Product product;
+        private Category category;
+
+        @BeforeEach
+        void setUp() {
+            category = Category.builder()
+                    .name("카테고리")
+                    .build();
+
+            product = Product.builder()
+                    .id(1L)
+                    .category(category)
+                    .name("상품명")
+                    .price(10000)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("전체 필드 수정 성공")
+        void updateProduct_success() {
+            // given
+            request = ProductUpdateRequest.builder()
+                    .categoryId(2L)
+                    .name("수정된 상품명")
+                    .price(20000)
+                    .stock(50)
+                    .build();
+
+            Category newCategory = Category.builder().name("새 카테고리").build();
+            ProductStock productStock = ProductStock.create(product, 100);
+
+            given(productRepository.findById(1L)).willReturn(Optional.of(product));
+            given(categoryRepository.findById(2L)).willReturn(Optional.of(newCategory));
+            given(productStockRepository.findById(1L)).willReturn(Optional.of(productStock));
+
+            // when
+            productService.updateProduct(1L, request);
+
+            // then
+            then(productRepository).should().findById(1L);
+            then(categoryRepository).should().findById(2L);
+            then(productStockRepository).should().findById(1L);
+            then(eventPublisher).should().publishEvent(any(ProductUpdatedEvent.class));
+        }
+
+        @Test
+        @DisplayName("재고 없이 수정 시 재고 관련 로직 호출 안 함")
+        void updateProduct_withoutStock() {
+            // given
+            request = ProductUpdateRequest.builder()
+                    .name("수정된 상품명")
+                    .build();
+
+            given(productRepository.findById(1L)).willReturn(Optional.of(product));
+
+            // when
+            productService.updateProduct(1L, request);
+
+            // then
+            then(productStockRepository).should(never()).findById(any());
+            then(eventPublisher).should(never()).publishEvent(any());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 상품 수정 시 실패")
+        void updateProduct_productNotFound() {
+            // given
+            request = ProductUpdateRequest.builder()
+                    .name("수정된 상품명")
+                    .build();
+
+            given(productRepository.findById(1L)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> productService.updateProduct(1L, request))
+                    .isInstanceOf(BusinessException.class);
+
+            then(productStockRepository).should(never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 카테고리로 수정 시 실패")
+        void updateProduct_categoryNotFound() {
+            // given
+            request = ProductUpdateRequest.builder()
+                    .categoryId(99L)
+                    .build();
+
+            given(productRepository.findById(1L)).willReturn(Optional.of(product));
+            given(categoryRepository.findById(99L)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> productService.updateProduct(1L, request))
+                    .isInstanceOf(BusinessException.class);
         }
     }
 }
