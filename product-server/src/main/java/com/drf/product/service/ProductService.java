@@ -76,7 +76,12 @@ public class ProductService {
     }
 
     private void validateDateRange(LocalDateTime startAt, LocalDateTime endAt) {
-        if (startAt != null && endAt != null && !endAt.isAfter(startAt)) {
+        // 시작, 종료 기간 둘 중 하나만 있는 경우
+        if ((startAt == null) != (endAt == null)) {
+            throw new BusinessException(ErrorCode.INCOMPLETE_SALE_DATE);
+        }
+        // 종료 시간이 시작 시간보다 과거인 경우
+        if (startAt != null && !endAt.isAfter(startAt)) {
             throw new BusinessException(ErrorCode.INVALID_SALE_DATE_RANGE);
         }
     }

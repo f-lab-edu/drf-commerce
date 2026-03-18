@@ -108,6 +108,27 @@ public class ProductServiceTest {
         }
 
         @Test
+        @DisplayName("세일 시작과 종료 중 하나만 존재할 경우 예외 발생")
+        void createProduct_incompleteSaleDate() {
+            // given
+            request = ProductCreateRequest.builder()
+                    .categoryId(1L)
+                    .name("상품명")
+                    .stock(100)
+                    .price(10000)
+                    .description("상품 설명")
+                    .discountRate(10)
+                    .saleStartAt(LocalDateTime.of(2026, 3, 1, 0, 0, 0))
+                    .build();
+
+            // when & then
+            assertThatThrownBy(() -> productService.createProduct(request))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INCOMPLETE_SALE_DATE);
+        }
+
+        @Test
         @DisplayName("세일 종료 시간이 시작 시간보다 과거일 경우 예외 발생")
         void createProduct_invalidSaleDateRange() {
             // given
