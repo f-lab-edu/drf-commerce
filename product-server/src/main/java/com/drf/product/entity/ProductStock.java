@@ -1,7 +1,6 @@
 package com.drf.product.entity;
 
 
-import com.drf.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "product_stock")
-public class ProductStock extends BaseTimeEntity {
+public class ProductStock {
 
     @Id
     private Long productId;
@@ -31,4 +30,12 @@ public class ProductStock extends BaseTimeEntity {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+
+    public static ProductStock create(Product product, int stock) {
+        return ProductStock.builder()
+                .product(product)
+                .stock(stock)
+                .build();
+    }
 }

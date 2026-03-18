@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Getter
 @Entity
@@ -42,4 +43,18 @@ public class Product extends BaseTimeEntity {
     private LocalDateTime saleEndAt;
 
     private LocalDateTime deletedAt;
+
+    public static Product create(Category category, String name, int price, String description,
+                                 Integer discountRate, LocalDateTime saleStartAt, LocalDateTime saleEndAt) {
+        return Product.builder()
+                .category(category)
+                .name(name)
+                .price(price)
+                .description(description)
+                .status(ProductStatus.READY)
+                .discountRate(Objects.requireNonNullElse(discountRate, 0))
+                .saleStartAt(saleStartAt)
+                .saleEndAt(saleEndAt)
+                .build();
+    }
 }
