@@ -4,6 +4,7 @@ import com.drf.common.exception.BusinessException;
 import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
+import com.drf.product.entity.ProductStatus;
 import com.drf.product.entity.ProductStock;
 import com.drf.product.event.ProductCreatedEvent;
 import com.drf.product.event.ProductDeletedEvent;
@@ -11,15 +12,20 @@ import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductCreateRequest;
 import com.drf.product.model.request.ProductUpdateRequest;
 import com.drf.product.model.response.ProductDetailResponse;
+import com.drf.product.model.response.ProductListResponse;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
 import com.drf.product.repository.ProductStockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -94,6 +100,44 @@ public class ProductService {
         ProductStock productStock = productStockRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
         return ProductDetailResponse.from(product, productStock);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductListResponse> searchProductsByName(String name, Pageable pageable) {
+        Page<Product> products = productRepository.findByNameContainingAndStatusNot(
+                name, ProductStatus.DELETED, pageable);
+        return mapToProductListResponse(products);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductListResponse> getProductsByCategory(long categoryId, Pageable pageable) {
+        categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+        Set<Long> categoryIds = collectDescendantCategoryIds(categoryId);
+        Page<Product> products = productRepository.findByCategoryIdInAndStatusNot(
+                categoryIds, ProductStatus.DELETED, pageable);
+        return mapToProductListResponse(products);
+    }
+
+    private Set<Long> collectDescendantCategoryIds(long rootId) {
+        Set<Long> ids = new HashSet<>();
+        Queue<Long> queue = new ArrayDeque<>();
+        queue.add(rootId);
+        while (!queue.isEmpty()) {
+            Long current = queue.poll();
+            ids.add(current);
+            categoryRepository.findByParentId(current).stream()
+                    .map(Category::getId)
+                    .forEach(queue::add);
+        }
+        return ids;
+    }
+
+    private Page<ProductListResponse> mapToProductListResponse(Page<Product> products) {
+        List<Long> ids = products.getContent().stream().map(Product::getId).toList();
+        Map<Long, ProductStock> stockMap = productStockRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(ProductStock::getProductId, ps -> ps));
+        return products.map(p -> ProductListResponse.from(p, stockMap.get(p.getId())));
     }
 
     private void validateDateRange(LocalDateTime startAt, LocalDateTime endAt) {

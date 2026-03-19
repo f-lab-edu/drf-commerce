@@ -12,6 +12,7 @@ import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductCreateRequest;
 import com.drf.product.model.request.ProductUpdateRequest;
 import com.drf.product.model.response.ProductDetailResponse;
+import com.drf.product.model.response.ProductListResponse;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
 import com.drf.product.repository.ProductStockRepository;
@@ -24,9 +25,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -327,6 +334,145 @@ public class ProductServiceTest {
             assertThatThrownBy(() -> productService.getProduct(1L))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("상품명 검색")
+    class SearchProductsByName {
+        private Category category;
+        private Product product;
+        private ProductStock productStock;
+
+        @BeforeEach
+        void setUp() {
+            category = Category.builder().name("카테고리").build();
+            product = Product.builder()
+                    .id(1L)
+                    .category(category)
+                    .name("상품명")
+                    .price(10000)
+                    .status(ProductStatus.READY)
+                    .discountRate(10)
+                    .build();
+            productStock = ProductStock.builder()
+                    .productId(1L)
+                    .product(product)
+                    .stock(100)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("검색어를 포함하는 상품 목록을 페이지로 반환한다")
+        void success() {
+            // given
+            Pageable pageable = PageRequest.of(0, 20);
+            given(productRepository.findByNameContainingAndStatusNot("상품", ProductStatus.DELETED, pageable))
+                    .willReturn(new PageImpl<>(List.of(product), pageable, 1));
+            given(productStockRepository.findAllById(List.of(1L)))
+                    .willReturn(List.of(productStock));
+
+            // when
+            Page<ProductListResponse> result = productService.searchProductsByName("상품", pageable);
+
+            // then
+            assertThat(result.getTotalElements()).isEqualTo(1);
+            assertThat(result.getContent().get(0).id()).isEqualTo(1L);
+            assertThat(result.getContent().get(0).name()).isEqualTo("상품명");
+            assertThat(result.getContent().get(0).stock()).isEqualTo(100);
+        }
+    }
+
+    @Nested
+    @DisplayName("카테고리별 상품 조회")
+    class GetProductsByCategory {
+        private Category category;
+        private Product product;
+        private ProductStock productStock;
+
+        @BeforeEach
+        void setUp() {
+            category = Category.builder().name("카테고리").build();
+            product = Product.builder()
+                    .id(1L)
+                    .category(category)
+                    .name("상품명")
+                    .price(10000)
+                    .status(ProductStatus.READY)
+                    .discountRate(10)
+                    .build();
+            productStock = ProductStock.builder()
+                    .productId(1L)
+                    .product(product)
+                    .stock(100)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("카테고리에 속한 상품 목록을 페이지로 반환한다 (하위 카테고리 포함)")
+        void success() {
+            // given
+            Pageable pageable = PageRequest.of(0, 20);
+            given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
+            given(categoryRepository.findByParentId(1L)).willReturn(List.of());
+            given(productRepository.findByCategoryIdInAndStatusNot(Set.of(1L), ProductStatus.DELETED, pageable))
+                    .willReturn(new PageImpl<>(List.of(product), pageable, 1));
+            given(productStockRepository.findAllById(List.of(1L)))
+                    .willReturn(List.of(productStock));
+
+            // when
+            Page<ProductListResponse> result = productService.getProductsByCategory(1L, pageable);
+
+            // then
+            assertThat(result.getTotalElements()).isEqualTo(1);
+            assertThat(result.getContent().get(0).id()).isEqualTo(1L);
+            assertThat(result.getContent().get(0).categoryName()).isEqualTo("카테고리");
+        }
+
+        @Test
+        @DisplayName("상위 카테고리로 조회하면 하위 카테고리의 상품도 반환한다")
+        void success_withDescendantCategories() {
+            // given
+            // 카테고리 구조: 상위(1) -> 하위(2) -> 최하위(3)
+            Category parent = Category.builder().id(1L).name("상위카테고리").build();
+            Category child = Category.builder().id(2L).name("하위카테고리").parent(parent).build();
+            Category grandchild = Category.builder().id(3L).name("최하위카테고리").parent(child).build();
+
+            Product childProduct = Product.builder()
+                    .id(2L).category(grandchild).name("최하위상품").price(5000)
+                    .status(ProductStatus.READY).discountRate(0).build();
+            ProductStock childStock = ProductStock.builder()
+                    .productId(2L).product(childProduct).stock(50).build();
+
+            Pageable pageable = PageRequest.of(0, 20);
+            given(categoryRepository.findById(1L)).willReturn(Optional.of(parent));
+            given(categoryRepository.findByParentId(1L)).willReturn(List.of(child));
+            given(categoryRepository.findByParentId(2L)).willReturn(List.of(grandchild));
+            given(categoryRepository.findByParentId(3L)).willReturn(List.of());
+            given(productRepository.findByCategoryIdInAndStatusNot(Set.of(1L, 2L, 3L), ProductStatus.DELETED, pageable))
+                    .willReturn(new PageImpl<>(List.of(childProduct), pageable, 1));
+            given(productStockRepository.findAllById(List.of(2L)))
+                    .willReturn(List.of(childStock));
+
+            // when
+            Page<ProductListResponse> result = productService.getProductsByCategory(1L, pageable);
+
+            // then
+            assertThat(result.getTotalElements()).isEqualTo(1);
+            assertThat(result.getContent().get(0).categoryName()).isEqualTo("최하위카테고리");
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 카테고리 조회 시 예외를 던진다")
+        void fail_categoryNotFound() {
+            // given
+            Pageable pageable = PageRequest.of(0, 20);
+            given(categoryRepository.findById(99L)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> productService.getProductsByCategory(99L, pageable))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
         }
     }
 
