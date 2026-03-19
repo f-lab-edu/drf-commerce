@@ -11,6 +11,7 @@ import com.drf.product.event.ProductDeletedEvent;
 import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductCreateRequest;
 import com.drf.product.model.request.ProductUpdateRequest;
+import com.drf.product.model.response.ProductDetailResponse;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
 import com.drf.product.repository.ProductStockRepository;
@@ -268,6 +269,64 @@ public class ProductServiceTest {
             // when & then
             assertThatThrownBy(() -> productService.updateProduct(1L, request))
                     .isInstanceOf(BusinessException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("상품 상세 조회")
+    class GetProduct {
+        private Category category;
+        private Product product;
+        private ProductStock productStock;
+
+        @BeforeEach
+        void setUp() {
+            category = Category.builder()
+                    .name("카테고리")
+                    .build();
+
+            product = Product.builder()
+                    .id(1L)
+                    .category(category)
+                    .name("상품명")
+                    .price(10000)
+                    .description("상품 설명")
+                    .status(ProductStatus.READY)
+                    .discountRate(10)
+                    .build();
+
+            productStock = ProductStock.create(product, 100);
+        }
+
+        @Test
+        @DisplayName("상품과 재고가 존재하면 상세 정보를 반환한다")
+        void success() {
+            // given
+            given(productRepository.findById(1L)).willReturn(Optional.of(product));
+            given(productStockRepository.findById(1L)).willReturn(Optional.of(productStock));
+
+            // when
+            ProductDetailResponse response = productService.getProduct(1L);
+
+            // then
+            assertThat(response.id()).isEqualTo(1L);
+            assertThat(response.categoryName()).isEqualTo("카테고리");
+            assertThat(response.name()).isEqualTo("상품명");
+            assertThat(response.price()).isEqualTo(10000);
+            assertThat(response.stock()).isEqualTo(100);
+            assertThat(response.discountRate()).isEqualTo(10);
+        }
+
+        @Test
+        @DisplayName("상품이 존재하지 않으면 예외를 던진다")
+        void fail_productNotFound() {
+            // given
+            given(productRepository.findById(1L)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> productService.getProduct(1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_FOUND);
         }
     }
 
