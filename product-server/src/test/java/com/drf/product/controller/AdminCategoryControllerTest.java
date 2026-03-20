@@ -3,6 +3,7 @@ package com.drf.product.controller;
 import com.drf.common.exception.BusinessException;
 import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.model.request.CategoryCreateRequest;
+import com.drf.product.model.response.CategoryTreeResponse;
 import com.drf.product.service.CategoryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,8 +12,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -114,6 +118,27 @@ public class AdminCategoryControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value(ErrorCode.DUPLICATE_CATEGORY_NAME.getMessage()));
+        }
+    }
+
+    @Nested
+    @DisplayName("카테고리 계층 전체 조회")
+    class GetCategories {
+
+        @Test
+        @DisplayName("카테고리 트리 조회 성공")
+        void getCategories_success() throws Exception {
+            CategoryTreeResponse child = new CategoryTreeResponse(2L, "스마트폰", List.of());
+            CategoryTreeResponse root = new CategoryTreeResponse(1L, "전자제품", List.of(child));
+            given(categoryService.getCategories()).willReturn(List.of(root));
+
+            mockMvc.perform(get("/categories")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "USER"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data[0].id").value(1L))
+                    .andExpect(jsonPath("$.data[0].name").value("전자제품"))
+                    .andExpect(jsonPath("$.data[0].children[0].name").value("스마트폰"));
         }
     }
 }

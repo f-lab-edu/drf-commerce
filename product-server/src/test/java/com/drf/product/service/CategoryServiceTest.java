@@ -4,6 +4,7 @@ import com.drf.common.exception.BusinessException;
 import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.model.request.CategoryCreateRequest;
+import com.drf.product.model.response.CategoryTreeResponse;
 import com.drf.product.repository.CategoryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,6 +14,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -109,6 +113,64 @@ public class CategoryServiceTest {
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_CATEGORY_NAME);
 
             then(categoryRepository).should(org.mockito.Mockito.never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("카테고리 계층 전체 조회")
+    class GetCategories {
+
+        @Test
+        @DisplayName("빈 목록 반환")
+        void getCategories_empty() {
+            // given
+            given(categoryRepository.findAll()).willReturn(List.of());
+
+            // when
+            List<CategoryTreeResponse> result = categoryService.getCategories();
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("단일 루트 카테고리 - children 비어있음")
+        void getCategories_singleRoot() {
+            // given
+            Category root = Category.builder().id(1L).name("전자제품").build();
+            given(categoryRepository.findAll()).willReturn(List.of(root));
+
+            // when
+            List<CategoryTreeResponse> result = categoryService.getCategories();
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().id()).isEqualTo(1L);
+            assertThat(result.getFirst().name()).isEqualTo("전자제품");
+            assertThat(result.getFirst().children()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("계층 구조 트리 빌드 - 루트 → 자식 → 손자")
+        void getCategories_hierarchy() {
+            // given
+            Category root = Category.builder().id(1L).name("전자제품").build();
+            Category child = Category.builder().id(2L).name("스마트폰").parent(root).build();
+            Category grandchild = Category.builder().id(3L).name("안드로이드").parent(child).build();
+            given(categoryRepository.findAll()).willReturn(List.of(root, child, grandchild));
+
+            // when
+            List<CategoryTreeResponse> result = categoryService.getCategories();
+
+            // then
+            assertThat(result).hasSize(1);
+            CategoryTreeResponse rootNode = result.getFirst();
+            assertThat(rootNode.name()).isEqualTo("전자제품");
+            assertThat(rootNode.children()).hasSize(1);
+            CategoryTreeResponse childNode = rootNode.children().getFirst();
+            assertThat(childNode.name()).isEqualTo("스마트폰");
+            assertThat(childNode.children()).hasSize(1);
+            assertThat(childNode.children().getFirst().name()).isEqualTo("안드로이드");
         }
     }
 }
