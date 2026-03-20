@@ -7,6 +7,7 @@ import com.drf.product.model.request.CategoryCreateRequest;
 import com.drf.product.model.request.CategoryUpdateRequest;
 import com.drf.product.model.response.CategoryTreeResponse;
 import com.drf.product.repository.CategoryRepository;
+import com.drf.product.repository.ProductRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,9 @@ public class CategoryServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Mock
+    private ProductRepository productRepository;
 
 
     @Nested
@@ -236,6 +240,71 @@ public class CategoryServiceTest {
             assertThatThrownBy(() -> categoryService.updateCategory(2L, new CategoryUpdateRequest("태블릿")))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_CATEGORY_NAME);
+        }
+    }
+
+    @Nested
+    @DisplayName("카테고리 삭제")
+    class DeleteCategory {
+
+        @Test
+        @DisplayName("카테고리 삭제 성공")
+        void deleteCategory_success() {
+            // given
+            given(categoryRepository.existsById(1L)).willReturn(true);
+            given(categoryRepository.existsByParentId(1L)).willReturn(false);
+            given(productRepository.existsByCategoryId(1L)).willReturn(false);
+
+            // when
+            categoryService.deleteCategory(1L);
+
+            // then
+            then(categoryRepository).should().deleteById(1L);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 카테고리 삭제 시 예외 발생")
+        void deleteCategory_notFound() {
+            // given
+            given(categoryRepository.existsById(99L)).willReturn(false);
+
+            // when & then
+            assertThatThrownBy(() -> categoryService.deleteCategory(99L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+
+            then(categoryRepository).should(org.mockito.Mockito.never()).deleteById(any());
+        }
+
+        @Test
+        @DisplayName("하위 카테고리 존재 시 예외 발생")
+        void deleteCategory_hasChildren() {
+            // given
+            given(categoryRepository.existsById(1L)).willReturn(true);
+            given(categoryRepository.existsByParentId(1L)).willReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> categoryService.deleteCategory(1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_HAS_CHILDREN);
+
+            then(categoryRepository).should(org.mockito.Mockito.never()).deleteById(any());
+        }
+
+        @Test
+        @DisplayName("상품 존재 시 예외 발생")
+        void deleteCategory_hasProducts() {
+            // given
+            given(categoryRepository.existsById(1L)).willReturn(true);
+            given(categoryRepository.existsByParentId(1L)).willReturn(false);
+            given(productRepository.existsByCategoryId(1L)).willReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> categoryService.deleteCategory(1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_HAS_PRODUCTS);
+
+            then(categoryRepository).should(org.mockito.Mockito.never()).deleteById(any());
         }
     }
 }

@@ -37,4 +37,10 @@ public class AdminCategoryController {
         categoryService.updateCategory(id, request);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable long id) {
+        categoryService.deleteCategory(id);
+        return ResponseEntity.noContent().build();
+    }
 }

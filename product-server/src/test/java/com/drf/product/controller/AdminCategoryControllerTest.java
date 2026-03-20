@@ -19,8 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -218,6 +217,59 @@ public class AdminCategoryControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value(ErrorCode.DUPLICATE_CATEGORY_NAME.getMessage()));
+        }
+    }
+
+    @Nested
+    @DisplayName("카테고리 삭제")
+    class DeleteCategory {
+
+        @Test
+        @DisplayName("카테고리 삭제 성공 - 204 반환")
+        void deleteCategory_success() throws Exception {
+            mockMvc.perform(delete("/categories/1")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "USER"))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 카테고리 삭제 시 404 반환")
+        void deleteCategory_notFound() throws Exception {
+            willThrow(new BusinessException(ErrorCode.CATEGORY_NOT_FOUND))
+                    .given(categoryService).deleteCategory(99L);
+
+            mockMvc.perform(delete("/categories/99")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "USER"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(ErrorCode.CATEGORY_NOT_FOUND.getMessage()));
+        }
+
+        @Test
+        @DisplayName("하위 카테고리 존재 시 409 반환")
+        void deleteCategory_hasChildren() throws Exception {
+            willThrow(new BusinessException(ErrorCode.CATEGORY_HAS_CHILDREN))
+                    .given(categoryService).deleteCategory(1L);
+
+            mockMvc.perform(delete("/categories/1")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "USER"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value(ErrorCode.CATEGORY_HAS_CHILDREN.getMessage()));
+        }
+
+        @Test
+        @DisplayName("상품 존재 시 409 반환")
+        void deleteCategory_hasProducts() throws Exception {
+            willThrow(new BusinessException(ErrorCode.CATEGORY_HAS_PRODUCTS))
+                    .given(categoryService).deleteCategory(1L);
+
+            mockMvc.perform(delete("/categories/1")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "USER"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value(ErrorCode.CATEGORY_HAS_PRODUCTS.getMessage()));
         }
     }
 }

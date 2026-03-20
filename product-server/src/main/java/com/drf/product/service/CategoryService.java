@@ -7,6 +7,7 @@ import com.drf.product.model.request.CategoryCreateRequest;
 import com.drf.product.model.request.CategoryUpdateRequest;
 import com.drf.product.model.response.CategoryTreeResponse;
 import com.drf.product.repository.CategoryRepository;
+import com.drf.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
 
     @Transactional
@@ -83,5 +85,21 @@ public class CategoryService {
         }
 
         category.updateName(request.name());
+    }
+
+    public void deleteCategory(Long categoryId) {
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+        }
+
+        if (categoryRepository.existsByParentId(categoryId)) {
+            throw new BusinessException(ErrorCode.CATEGORY_HAS_CHILDREN);
+        }
+
+        if (productRepository.existsByCategoryId(categoryId)) {
+            throw new BusinessException(ErrorCode.CATEGORY_HAS_PRODUCTS);
+        }
+
+        categoryRepository.deleteById(categoryId);
     }
 }
