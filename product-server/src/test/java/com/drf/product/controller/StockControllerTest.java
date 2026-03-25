@@ -45,6 +45,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/reserve")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -65,6 +66,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/999/reserve")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
@@ -84,6 +86,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/reserve")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict())
@@ -100,6 +103,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/reserve")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
@@ -115,10 +119,12 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/reserve")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
         }
+
     }
 
     @Nested
@@ -139,6 +145,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/release")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -159,6 +166,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/999/release")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
@@ -175,6 +183,7 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/release")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
@@ -190,9 +199,11 @@ class StockControllerTest extends BaseControllerTest {
             mockMvc.perform(post("/stocks/1/release")
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body))
                     .andExpect(status().isBadRequest());
         }
+
     }
 }
