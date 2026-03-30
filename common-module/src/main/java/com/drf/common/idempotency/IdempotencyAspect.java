@@ -52,6 +52,12 @@ public class IdempotencyAspect {
         }
 
         try {
+            // 락 획득 후 재확인: 대기 중 선행 스레드가 완료했을 수 있음
+            Optional<CachedResponse> cachedAfterLock = idempotencyStore.findCachedResponse(idempotencyKey, scope);
+            if (cachedAfterLock.isPresent()) {
+                return restore(cachedAfterLock.get());
+            }
+
             // 실제 비즈니스 로직 수행 및 응답 저장
             Object result = joinPoint.proceed();
             if (result instanceof ResponseEntity<?> responseEntity) {

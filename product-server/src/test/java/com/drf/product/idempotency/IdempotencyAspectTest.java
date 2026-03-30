@@ -91,6 +91,30 @@ class IdempotencyAspectTest {
     }
 
     @Test
+    @DisplayName("락 획득 후 재조회에서 캐시 히트 시 비즈니스 로직 없이 캐시된 응답을 반환하고 락을 해제한다")
+    void lockAcquired_cacheHitAfterLock_returnsCachedAndReleasesLock() throws Throwable {
+        // given
+        String cachedBody = "{\"code\":\"SUCCESS\"}";
+        given(idempotent.scope()).willReturn(SCOPE);
+        given(idempotencyStore.findCachedResponse(IDEMPOTENCY_KEY, SCOPE))
+                .willReturn(Optional.empty())
+                .willReturn(Optional.of(new CachedResponse(200, cachedBody)));
+
+        ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
+        given(idempotencyLock.acquire(eq(IDEMPOTENCY_KEY), eq(SCOPE), tokenCaptor.capture())).willReturn(true);
+        given(jsonConverter.toJsonNode(cachedBody)).willReturn(mock(JsonNode.class));
+
+        // when
+        Object returned = idempotencyAspect.checkIdempotency(joinPoint, idempotent);
+
+        // then
+        assertThat(returned).isInstanceOf(ResponseEntity.class);
+        then(joinPoint).should(never()).proceed();
+        String capturedToken = tokenCaptor.getValue();
+        then(idempotencyLock).should().release(IDEMPOTENCY_KEY, SCOPE, capturedToken);
+    }
+
+    @Test
     @DisplayName("락 선점 실패 시 IDEMPOTENCY_CONFLICT 예외 발생")
     void lockAcquireFail_throwsConflict() {
         // given
