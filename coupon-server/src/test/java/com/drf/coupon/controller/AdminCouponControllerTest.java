@@ -5,6 +5,7 @@ import com.drf.coupon.common.exception.ErrorCode;
 import com.drf.coupon.entity.ApplyType;
 import com.drf.coupon.entity.DiscountType;
 import com.drf.coupon.model.request.CouponCreateRequest;
+import com.drf.coupon.model.request.CouponUpdateRequest;
 import com.drf.coupon.service.CouponAdminService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,9 +17,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,6 +104,61 @@ class AdminCouponControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_VALID_DATE_RANGE.getMessage()));
+        }
+    }
+
+    @Nested
+    @DisplayName("쿠폰 수정")
+    class UpdateCoupon {
+
+        @Test
+        @DisplayName("수정 성공")
+        void updateCoupon_success() throws Exception {
+            CouponUpdateRequest request = CouponUpdateRequest.builder()
+                    .name("수정된 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(5000)
+                    .totalQuantity(200)
+                    .minOrderAmount(20000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 5, 1, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 5, 31, 23, 59))
+                    .build();
+
+            willDoNothing().given(couponAdminService).updateCoupon(anyLong(), any(CouponUpdateRequest.class));
+
+            mockMvc.perform(put("/admin/coupons/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN")
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 쿠폰 수정 시 404 반환")
+        void updateCoupon_notFound() throws Exception {
+            CouponUpdateRequest request = CouponUpdateRequest.builder()
+                    .name("수정된 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(5000)
+                    .totalQuantity(200)
+                    .minOrderAmount(20000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 5, 1, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 5, 31, 23, 59))
+                    .build();
+
+            willThrow(new BusinessException(ErrorCode.COUPON_NOT_FOUND))
+                    .given(couponAdminService).updateCoupon(anyLong(), any(CouponUpdateRequest.class));
+
+            mockMvc.perform(put("/admin/coupons/999")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN")
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(ErrorCode.COUPON_NOT_FOUND.getMessage()));
         }
     }
 }

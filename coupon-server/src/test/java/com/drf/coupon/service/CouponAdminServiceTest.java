@@ -4,8 +4,10 @@ import com.drf.common.exception.BusinessException;
 import com.drf.coupon.common.exception.ErrorCode;
 import com.drf.coupon.entity.ApplyType;
 import com.drf.coupon.entity.Coupon;
+import com.drf.coupon.entity.CouponStatus;
 import com.drf.coupon.entity.DiscountType;
 import com.drf.coupon.model.request.CouponCreateRequest;
+import com.drf.coupon.model.request.CouponUpdateRequest;
 import com.drf.coupon.repository.CouponRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +23,7 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -148,6 +151,92 @@ class CouponAdminServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.RATE_COUPON_REQUIRES_MAX_DISCOUNT);
+        }
+    }
+
+    @Nested
+    @DisplayName("쿠폰 수정")
+    class UpdateCoupon {
+
+        private CouponUpdateRequest request;
+        private Coupon coupon;
+
+        @BeforeEach
+        void setUp() {
+            request = CouponUpdateRequest.builder()
+                    .name("수정된 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(5000)
+                    .totalQuantity(200)
+                    .minOrderAmount(20000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 5, 1, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 5, 31, 23, 59))
+                    .build();
+
+            coupon = Coupon.builder()
+                    .id(1L)
+                    .name("원래 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(3000)
+                    .totalQuantity(100)
+                    .issuedQuantity(0)
+                    .minOrderAmount(10000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 4, 1, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 4, 30, 23, 59))
+                    .status(com.drf.coupon.entity.CouponStatus.ACTIVE)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("수정 성공")
+        void updateCoupon_success() {
+            // given
+            given(couponRepository.findByIdAndStatusNot(eq(1L), eq(CouponStatus.DELETED)))
+                    .willReturn(java.util.Optional.of(coupon));
+
+            // when
+            couponAdminService.updateCoupon(1L, request);
+
+            // then
+            then(couponRepository).should().findByIdAndStatusNot(eq(1L), eq(CouponStatus.DELETED));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 쿠폰 수정 시 예외 발생")
+        void updateCoupon_notFound() {
+            // given
+            given(couponRepository.findByIdAndStatusNot(eq(999L), eq(CouponStatus.DELETED)))
+                    .willReturn(java.util.Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> couponAdminService.updateCoupon(999L, request))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.COUPON_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("유효기간 종료일이 시작일보다 이전이면 예외 발생")
+        void updateCoupon_invalidValidDateRange() {
+            // given
+            request = CouponUpdateRequest.builder()
+                    .name("수정된 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(5000)
+                    .totalQuantity(200)
+                    .minOrderAmount(20000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 5, 31, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 5, 1, 0, 0))
+                    .build();
+
+            // when & then
+            assertThatThrownBy(() -> couponAdminService.updateCoupon(1L, request))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INVALID_VALID_DATE_RANGE);
         }
     }
 }
