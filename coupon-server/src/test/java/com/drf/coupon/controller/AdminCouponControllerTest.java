@@ -3,9 +3,11 @@ package com.drf.coupon.controller;
 import com.drf.common.exception.BusinessException;
 import com.drf.coupon.common.exception.ErrorCode;
 import com.drf.coupon.entity.ApplyType;
+import com.drf.coupon.entity.CouponStatus;
 import com.drf.coupon.entity.DiscountType;
 import com.drf.coupon.model.request.CouponCreateRequest;
 import com.drf.coupon.model.request.CouponUpdateRequest;
+import com.drf.coupon.model.response.CouponListResponse;
 import com.drf.coupon.service.CouponAdminService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -103,6 +106,44 @@ class AdminCouponControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_VALID_DATE_RANGE.getMessage()));
+        }
+    }
+
+    @Nested
+    @DisplayName("쿠폰 목록 조회")
+    class GetCoupons {
+
+        @Test
+        @DisplayName("조회 성공")
+        void getCoupons_success() throws Exception {
+            CouponListResponse response = new CouponListResponse(
+                    1L, "신규 가입 쿠폰", DiscountType.FIXED, 3000, null, 10000,
+                    ApplyType.ALL, null,
+                    LocalDateTime.of(2026, 4, 1, 0, 0), LocalDateTime.of(2026, 4, 30, 23, 59),
+                    100, 1, CouponStatus.ACTIVE
+            );
+
+            given(couponAdminService.getCoupons()).willReturn(List.of(response));
+
+            mockMvc.perform(get("/admin/coupons")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data[0].couponId").value(1L))
+                    .andExpect(jsonPath("$.data[0].totalQuantity").value(100))
+                    .andExpect(jsonPath("$.data[0].issuedQuantity").value(1));
+        }
+
+        @Test
+        @DisplayName("쿠폰이 없으면 빈 목록 반환")
+        void getCoupons_empty() throws Exception {
+            given(couponAdminService.getCoupons()).willReturn(List.of());
+
+            mockMvc.perform(get("/admin/coupons")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data").isEmpty());
         }
     }
 

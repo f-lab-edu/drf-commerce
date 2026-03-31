@@ -8,6 +8,7 @@ import com.drf.coupon.entity.CouponStatus;
 import com.drf.coupon.entity.DiscountType;
 import com.drf.coupon.model.request.CouponCreateRequest;
 import com.drf.coupon.model.request.CouponUpdateRequest;
+import com.drf.coupon.model.response.CouponListResponse;
 import com.drf.coupon.repository.CouponRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -237,6 +239,54 @@ class CouponAdminServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_VALID_DATE_RANGE);
+        }
+    }
+
+    @Nested
+    @DisplayName("쿠폰 목록 조회")
+    class GetCoupons {
+
+        @Test
+        @DisplayName("DELETED 제외한 쿠폰 목록 반환")
+        void getCoupons_success() {
+            // given
+            Coupon coupon = Coupon.builder()
+                    .id(1L)
+                    .name("신규 가입 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(3000)
+                    .totalQuantity(100)
+                    .issuedQuantity(1)
+                    .minOrderAmount(10000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 4, 1, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 4, 30, 23, 59))
+                    .status(CouponStatus.ACTIVE)
+                    .build();
+
+            given(couponRepository.findByStatusNot(CouponStatus.DELETED)).willReturn(List.of(coupon));
+
+            // when
+            List<CouponListResponse> result = couponAdminService.getCoupons();
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).couponId()).isEqualTo(1L);
+            assertThat(result.get(0).totalQuantity()).isEqualTo(100);
+            assertThat(result.get(0).issuedQuantity()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("쿠폰이 없으면 빈 목록 반환")
+        void getCoupons_empty() {
+            // given
+            given(couponRepository.findByStatusNot(CouponStatus.DELETED)).willReturn(List.of());
+
+            // when
+            List<CouponListResponse> result = couponAdminService.getCoupons();
+
+            // then
+            assertThat(result).isEmpty();
         }
     }
 

@@ -4,11 +4,14 @@ import com.drf.common.model.CommonResponse;
 import com.drf.coupon.model.request.CouponCreateRequest;
 import com.drf.coupon.model.request.CouponUpdateRequest;
 import com.drf.coupon.model.response.CouponCreateResponse;
+import com.drf.coupon.model.response.CouponListResponse;
 import com.drf.coupon.service.CouponAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @RestController
@@ -22,6 +25,13 @@ public class AdminCouponController {
             @Valid @RequestBody CouponCreateRequest request) {
         Long couponId = couponAdminService.createCoupon(request);
         return ResponseEntity.ok(CommonResponse.success(new CouponCreateResponse(couponId)));
+    }
+
+
+    @GetMapping("/admin/coupons")
+    public ResponseEntity<CommonResponse<List<CouponListResponse>>> getCoupons() {
+        List<CouponListResponse> list = couponAdminService.getCoupons();
+        return ResponseEntity.ok(CommonResponse.success(list));
     }
 
     @PutMapping("/admin/coupons/{id}")

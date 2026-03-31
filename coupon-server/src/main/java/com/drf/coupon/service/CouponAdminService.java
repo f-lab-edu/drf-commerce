@@ -8,12 +8,14 @@ import com.drf.coupon.entity.CouponStatus;
 import com.drf.coupon.entity.DiscountType;
 import com.drf.coupon.model.request.CouponCreateRequest;
 import com.drf.coupon.model.request.CouponUpdateRequest;
+import com.drf.coupon.model.response.CouponListResponse;
 import com.drf.coupon.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +42,13 @@ public class CouponAdminService {
         );
 
         return couponRepository.save(coupon).getId();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CouponListResponse> getCoupons() {
+        return couponRepository.findByStatusNot(CouponStatus.DELETED).stream()
+                .map(CouponListResponse::from)
+                .toList();
     }
 
     @Transactional
