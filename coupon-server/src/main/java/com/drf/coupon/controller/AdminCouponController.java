@@ -30,4 +30,10 @@ public class AdminCouponController {
         couponAdminService.updateCoupon(id, request);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/admin/coupons/{id}")
+    public ResponseEntity<Void> deleteCoupon(@PathVariable Long id) {
+        couponAdminService.deleteCoupon(id);
+        return ResponseEntity.noContent().build();
+    }
 }

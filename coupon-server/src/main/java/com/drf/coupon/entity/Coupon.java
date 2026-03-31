@@ -73,6 +73,11 @@ public class Coupon extends BaseTimeEntity {
         this.validUntil = validUntil;
     }
 
+    public void delete() {
+        this.status = CouponStatus.DELETED;
+        this.deletedAt = LocalDateTime.now();
+    }
+
     public static Coupon create(String name, DiscountType discountType, int discountValue,
                                 int totalQuantity, int minOrderAmount, Integer maxDiscountAmount,
                                 ApplyType applyType, Long applyTargetId,

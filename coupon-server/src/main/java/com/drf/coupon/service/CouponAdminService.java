@@ -64,6 +64,13 @@ public class CouponAdminService {
         );
     }
 
+    @Transactional
+    public void deleteCoupon(Long id) {
+        Coupon coupon = couponRepository.findByIdAndStatusNot(id, CouponStatus.DELETED)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+        coupon.delete();
+    }
+
     private void validateCouponFields(DiscountType discountType, Integer maxDiscountAmount,
                                       ApplyType applyType, Long applyTargetId,
                                       LocalDateTime validFrom, LocalDateTime validUntil) {

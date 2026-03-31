@@ -19,8 +19,7 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -157,6 +156,35 @@ class AdminCouponControllerTest extends BaseControllerTest {
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "ADMIN")
                             .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(ErrorCode.COUPON_NOT_FOUND.getMessage()));
+        }
+    }
+
+    @Nested
+    @DisplayName("쿠폰 삭제")
+    class DeleteCoupon {
+
+        @Test
+        @DisplayName("삭제 성공")
+        void deleteCoupon_success() throws Exception {
+            willDoNothing().given(couponAdminService).deleteCoupon(anyLong());
+
+            mockMvc.perform(delete("/admin/coupons/1")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN"))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 쿠폰 삭제 시 404 반환")
+        void deleteCoupon_notFound() throws Exception {
+            willThrow(new BusinessException(ErrorCode.COUPON_NOT_FOUND))
+                    .given(couponAdminService).deleteCoupon(anyLong());
+
+            mockMvc.perform(delete("/admin/coupons/999")
+                            .header("X-User-Id", 1)
+                            .header("X-User-Role", "ADMIN"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.message").value(ErrorCode.COUPON_NOT_FOUND.getMessage()));
         }

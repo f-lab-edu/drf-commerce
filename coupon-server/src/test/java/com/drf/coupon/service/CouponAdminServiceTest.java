@@ -239,4 +239,56 @@ class CouponAdminServiceTest {
                     .isEqualTo(ErrorCode.INVALID_VALID_DATE_RANGE);
         }
     }
+
+    @Nested
+    @DisplayName("쿠폰 삭제")
+    class DeleteCoupon {
+
+        private Coupon coupon;
+
+        @BeforeEach
+        void setUp() {
+            coupon = Coupon.builder()
+                    .id(1L)
+                    .name("삭제할 쿠폰")
+                    .discountType(DiscountType.FIXED)
+                    .discountValue(3000)
+                    .totalQuantity(100)
+                    .issuedQuantity(0)
+                    .minOrderAmount(10000)
+                    .applyType(ApplyType.ALL)
+                    .validFrom(LocalDateTime.of(2026, 4, 1, 0, 0))
+                    .validUntil(LocalDateTime.of(2026, 4, 30, 23, 59))
+                    .status(CouponStatus.ACTIVE)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("삭제 성공")
+        void deleteCoupon_success() {
+            // given
+            given(couponRepository.findByIdAndStatusNot(eq(1L), eq(CouponStatus.DELETED)))
+                    .willReturn(java.util.Optional.of(coupon));
+
+            // when
+            couponAdminService.deleteCoupon(1L);
+
+            // then
+            then(couponRepository).should().findByIdAndStatusNot(eq(1L), eq(CouponStatus.DELETED));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 쿠폰 삭제 시 예외 발생")
+        void deleteCoupon_notFound() {
+            // given
+            given(couponRepository.findByIdAndStatusNot(eq(999L), eq(CouponStatus.DELETED)))
+                    .willReturn(java.util.Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> couponAdminService.deleteCoupon(999L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.COUPON_NOT_FOUND);
+        }
+    }
 }
