@@ -9,11 +9,11 @@ import com.drf.coupon.model.response.CouponIssueResponse;
 import com.drf.coupon.model.response.MemberCouponListResponse;
 import com.drf.coupon.repository.CouponRepository;
 import com.drf.coupon.repository.MemberCouponRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,7 +31,6 @@ import static org.mockito.BDDMockito.given;
 @ExtendWith(MockitoExtension.class)
 class CouponServiceTest {
 
-    @InjectMocks
     private CouponService couponService;
 
     @Mock
@@ -49,6 +48,16 @@ class CouponServiceTest {
     private ApplyScopeRegistry applyScopeRegistry = new ApplyScopeRegistry(
             List.of(new AllApplyScope(), new CategoryApplyScope())
     );
+
+    @BeforeEach
+    void setUp() {
+        // 검증 로직은 CouponValidatorTest에서 검증 - 서비스 테스트에서는 빈 리스트로 주입
+        couponService = new CouponService(
+                couponRepository, memberCouponRepository,
+                discountPolicyRegistry, applyScopeRegistry,
+                List.of()
+        );
+    }
 
     @Nested
     @DisplayName("보유 쿠폰 목록 조회")
@@ -106,8 +115,35 @@ class CouponServiceTest {
     }
 
     @Nested
-    @DisplayName("쿠폰 발급 검증")
-    class ValidateAndGetCoupon {
+    @DisplayName("발급용 쿠폰 조회")
+    class GetCouponForIssue {
+
+        @Test
+        @DisplayName("성공 - 쿠폰 반환 (검증은 validatorRegistry에 위임)")
+        void getCouponForIssue_success() {
+            // given
+            Coupon coupon = activeCoupon();
+            given(couponRepository.findByIdAndStatus(1L, CouponStatus.ACTIVE)).willReturn(Optional.of(coupon));
+
+            // when
+            Coupon result = couponService.getCouponForIssue(1L, 1L);
+
+            // then
+            assertThat(result.getId()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 쿠폰이면 예외 발생")
+        void getCouponForIssue_couponNotFound() {
+            // given
+            given(couponRepository.findByIdAndStatus(999L, CouponStatus.ACTIVE)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> couponService.getCouponForIssue(999L, 1L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.COUPON_NOT_FOUND);
+        }
 
         private Coupon activeCoupon() {
             return Coupon.builder()
@@ -123,74 +159,6 @@ class CouponServiceTest {
                     .validUntil(LocalDateTime.now().plusDays(30))
                     .status(CouponStatus.ACTIVE)
                     .build();
-        }
-
-        @Test
-        @DisplayName("검증 성공 - 쿠폰 반환")
-        void validateAndGetCoupon_success() {
-            // given
-            given(couponRepository.findByIdAndStatus(1L, CouponStatus.ACTIVE)).willReturn(Optional.of(activeCoupon()));
-            given(memberCouponRepository.existsByMemberIdAndCouponId(1L, 1L)).willReturn(false);
-
-            // when
-            Coupon result = couponService.getCouponForIssue(1L, 1L);
-
-            // then
-            assertThat(result.getId()).isEqualTo(1L);
-        }
-
-        @Test
-        @DisplayName("존재하지 않는 쿠폰이면 예외 발생")
-        void validateAndGetCoupon_couponNotFound() {
-            // given
-            given(couponRepository.findByIdAndStatus(999L, CouponStatus.ACTIVE)).willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> couponService.getCouponForIssue(999L, 1L))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.COUPON_NOT_FOUND);
-        }
-
-        @Test
-        @DisplayName("유효기간이 아니면 예외 발생")
-        void validateAndGetCoupon_notAvailable() {
-            // given
-            Coupon expiredCoupon = Coupon.builder()
-                    .id(1L)
-                    .name("만료 쿠폰")
-                    .discountType(DiscountType.FIXED)
-                    .discountValue(3000)
-                    .totalQuantity(100)
-                    .issuedQuantity(0)
-                    .minOrderAmount(10000)
-                    .applyType(ApplyType.ALL)
-                    .validFrom(LocalDateTime.now().minusDays(30))
-                    .validUntil(LocalDateTime.now().minusDays(1))
-                    .status(CouponStatus.ACTIVE)
-                    .build();
-
-            given(couponRepository.findByIdAndStatus(1L, CouponStatus.ACTIVE)).willReturn(Optional.of(expiredCoupon));
-
-            // when & then
-            assertThatThrownBy(() -> couponService.getCouponForIssue(1L, 1L))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.COUPON_NOT_AVAILABLE);
-        }
-
-        @Test
-        @DisplayName("이미 발급받은 쿠폰이면 예외 발생")
-        void validateAndGetCoupon_alreadyIssued() {
-            // given
-            given(couponRepository.findByIdAndStatus(1L, CouponStatus.ACTIVE)).willReturn(Optional.of(activeCoupon()));
-            given(memberCouponRepository.existsByMemberIdAndCouponId(1L, 1L)).willReturn(true);
-
-            // when & then
-            assertThatThrownBy(() -> couponService.getCouponForIssue(1L, 1L))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.COUPON_ALREADY_ISSUED);
         }
     }
 
@@ -267,11 +235,11 @@ class CouponServiceTest {
 
     @Nested
     @DisplayName("회원 쿠폰 조회 (계산용)")
-    class GetMemberCouponForCalculate {
+    class GetMemberCoupon {
 
         @Test
         @DisplayName("보유하지 않은 쿠폰이면 예외 발생")
-        void getMemberCouponForCalculate_notFound() {
+        void getMemberCoupon_notFound() {
             // given
             given(memberCouponRepository.findByIdAndMemberIdAndStatus(999L, 1L, MemberCouponStatus.UNUSED))
                     .willReturn(Optional.empty());
@@ -426,77 +394,6 @@ class CouponServiceTest {
             // then
             assertThat(result.discountAmount()).isEqualTo(20000);
             assertThat(result.finalAmount()).isEqualTo(0);
-        }
-
-        @Test
-        @DisplayName("유효기간이 아니면 예외 발생")
-        void calculate_notAvailable() {
-            // given
-            Coupon expiredCoupon = Coupon.builder()
-                    .id(1L)
-                    .name("만료 쿠폰")
-                    .discountType(DiscountType.FIXED)
-                    .discountValue(3000)
-                    .totalQuantity(100)
-                    .issuedQuantity(1)
-                    .minOrderAmount(10000)
-                    .applyType(ApplyType.ALL)
-                    .validFrom(LocalDateTime.now().minusDays(30))
-                    .validUntil(LocalDateTime.now().minusDays(1))
-                    .status(CouponStatus.ACTIVE)
-                    .build();
-
-            // when & then
-            assertThatThrownBy(() -> couponService.calculate(memberCoupon(expiredCoupon), 15000, null))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.COUPON_NOT_AVAILABLE);
-        }
-
-        @Test
-        @DisplayName("최소 주문 금액 미충족 시 예외 발생")
-        void calculate_minOrderAmountNotMet() {
-            // when & then
-            assertThatThrownBy(() -> couponService.calculate(memberCoupon(fixedCoupon()), 5000, null))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.COUPON_MIN_ORDER_AMOUNT_NOT_MET);
-        }
-
-        @Test
-        @DisplayName("CATEGORY 쿠폰인데 categoryAmount가 없으면 예외 발생")
-        void calculate_category_missingCategoryAmount() {
-            // when & then
-            assertThatThrownBy(() -> couponService.calculate(memberCoupon(rateCoupon(ApplyType.CATEGORY)), 15000, null))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.CATEGORY_AMOUNT_REQUIRED);
-        }
-
-        @Test
-        @DisplayName("CATEGORY + FIXED 쿠폰인데 categoryAmount가 없으면 예외 발생")
-        void calculate_categoryFixed_missingCategoryAmount() {
-            // given
-            Coupon coupon = Coupon.builder()
-                    .id(3L)
-                    .name("카테고리 정액 쿠폰")
-                    .discountType(DiscountType.FIXED)
-                    .discountValue(3000)
-                    .totalQuantity(100)
-                    .issuedQuantity(1)
-                    .minOrderAmount(10000)
-                    .applyType(ApplyType.CATEGORY)
-                    .applyTargetId(10L)
-                    .validFrom(LocalDateTime.now().minusDays(1))
-                    .validUntil(LocalDateTime.now().plusDays(30))
-                    .status(CouponStatus.ACTIVE)
-                    .build();
-
-            // when & then
-            assertThatThrownBy(() -> couponService.calculate(memberCoupon(coupon), 15000, null))
-                    .isInstanceOf(BusinessException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.CATEGORY_AMOUNT_REQUIRED);
         }
     }
 }

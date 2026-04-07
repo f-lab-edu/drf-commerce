@@ -5,12 +5,18 @@ import com.drf.coupon.common.exception.ErrorCode;
 import com.drf.coupon.discount.ApplyScopeRegistry;
 import com.drf.coupon.discount.DiscountContext;
 import com.drf.coupon.discount.DiscountPolicyRegistry;
-import com.drf.coupon.entity.*;
+import com.drf.coupon.entity.Coupon;
+import com.drf.coupon.entity.CouponStatus;
+import com.drf.coupon.entity.MemberCoupon;
+import com.drf.coupon.entity.MemberCouponStatus;
 import com.drf.coupon.model.response.CouponCalculateResponse;
 import com.drf.coupon.model.response.CouponIssueResponse;
 import com.drf.coupon.model.response.MemberCouponListResponse;
 import com.drf.coupon.repository.CouponRepository;
 import com.drf.coupon.repository.MemberCouponRepository;
+import com.drf.coupon.validation.CouponValidationContext;
+import com.drf.coupon.validation.CouponValidationStrategy;
+import com.drf.coupon.validation.ValidationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -26,6 +32,7 @@ public class CouponService {
     private final MemberCouponRepository memberCouponRepository;
     private final DiscountPolicyRegistry discountPolicyRegistry;
     private final ApplyScopeRegistry applyScopeRegistry;
+    private final List<CouponValidationStrategy> validators;
 
     @Transactional(readOnly = true)
     public List<MemberCouponListResponse> getMemberCoupons(Long memberId) {
@@ -39,11 +46,7 @@ public class CouponService {
         Coupon coupon = couponRepository.findByIdAndStatus(couponId, CouponStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
 
-        coupon.validateCouponAvailability();
-
-        if (memberCouponRepository.existsByMemberIdAndCouponId(memberId, couponId)) {
-            throw new BusinessException(ErrorCode.COUPON_ALREADY_ISSUED);
-        }
+        validate(ValidationType.ISSUE, CouponValidationContext.forIssue(coupon, memberId));
 
         return coupon;
     }
@@ -71,20 +74,18 @@ public class CouponService {
     public CouponCalculateResponse calculate(MemberCoupon memberCoupon, int orderAmount, Integer categoryAmount) {
         Coupon coupon = memberCoupon.getCoupon();
 
-        coupon.validateCouponAvailability();
-
-        if (orderAmount < coupon.getMinOrderAmount()) {
-            throw new BusinessException(ErrorCode.COUPON_MIN_ORDER_AMOUNT_NOT_MET);
-        }
-
-        if (coupon.getApplyType() == ApplyType.CATEGORY && (categoryAmount == null || categoryAmount == 0)) {
-            throw new BusinessException(ErrorCode.CATEGORY_AMOUNT_REQUIRED);
-        }
+        validate(ValidationType.CALCULATE, CouponValidationContext.forCalculate(coupon, orderAmount, categoryAmount));
 
         DiscountContext discountContext = new DiscountContext(orderAmount, categoryAmount);
         int base = applyScopeRegistry.get(coupon.getApplyType()).getBase(discountContext);
         int discountAmount = discountPolicyRegistry.get(coupon.getDiscountType()).calculate(coupon, base);
 
         return new CouponCalculateResponse(orderAmount, discountAmount, Math.max(0, orderAmount - discountAmount));
+    }
+
+    private void validate(ValidationType type, CouponValidationContext context) {
+        validators.stream()
+                .filter(v -> v.supports(type))
+                .forEach(v -> v.validate(context));
     }
 }
