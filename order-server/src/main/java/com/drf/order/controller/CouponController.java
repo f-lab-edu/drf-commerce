@@ -3,6 +3,7 @@ package com.drf.order.controller;
 import com.drf.common.model.AuthInfo;
 import com.drf.common.model.CommonResponse;
 import com.drf.order.client.dto.response.InternalCartCouponAvilableListResponse;
+import com.drf.order.client.dto.response.InternalCartCouponCalculateResponse;
 import com.drf.order.model.request.CartCouponAvailableRequest;
 import com.drf.order.service.CartCouponService;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,14 @@ public class CouponController {
             AuthInfo authInfo) {
         return ResponseEntity.ok(CommonResponse.success(
                 cartCouponService.getAvailableCartCoupons(items, authInfo.id())));
+    }
+
+    @PostMapping("/cart/{memberCouponId}")
+    public ResponseEntity<CommonResponse<InternalCartCouponCalculateResponse>> applyCartCoupon(
+            @PathVariable long memberCouponId,
+            @RequestBody List<CartCouponAvailableRequest> items,
+            AuthInfo authInfo) {
+        return ResponseEntity.ok(CommonResponse.success(
+                cartCouponService.applyCartCoupon(authInfo.id(), memberCouponId, items)));
     }
 }
