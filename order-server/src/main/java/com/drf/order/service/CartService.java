@@ -83,6 +83,8 @@ public class CartService {
     public void updateCartItemCoupon(Long memberId, Long productId, Long memberCouponId) {
         Cart cart = cartRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+        cartItemRepository.findByCartIdAndCouponId(cart.getId(), memberCouponId)
+                .ifPresent(CartItem::clearCoupon);
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND));
         item.updateCouponId(memberCouponId);
