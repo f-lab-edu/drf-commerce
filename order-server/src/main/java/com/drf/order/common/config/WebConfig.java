@@ -1,4 +1,4 @@
-package com.drf.product.common.config;
+package com.drf.order.common.config;
 
 import com.drf.common.interceptor.RoleCheckInterceptor;
 import com.drf.common.resolver.AuthInfoResolver;
@@ -22,8 +22,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(roleCheckInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/error",
-                        "/internal/**"
+                        "/error"
                 );
     }
 
