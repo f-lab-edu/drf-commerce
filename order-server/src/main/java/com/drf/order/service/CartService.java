@@ -4,6 +4,7 @@ import com.drf.common.exception.BusinessException;
 import com.drf.order.common.exception.ErrorCode;
 import com.drf.order.entity.Cart;
 import com.drf.order.entity.CartItem;
+import com.drf.order.model.dto.CartItemsResult;
 import com.drf.order.repository.CartItemRepository;
 import com.drf.order.repository.CartRepository;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +78,18 @@ public class CartService {
                 .map(CartItem::getCouponId)
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+
+    @Transactional(readOnly = true)
+    public CartItemsResult getValidatedCartItems(long memberId, List<Long> cartItemIds) {
+        Cart cart = cartRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CART_NOT_FOUND));
+        List<CartItem> items = cartItemRepository.findAllByIdInAndCartId(cartItemIds, cart.getId());
+        if (items.size() != cartItemIds.size()) {
+            throw new BusinessException(ErrorCode.CART_ITEM_NOT_OWNED);
+        }
+        return new CartItemsResult(cart, items);
     }
 
     @Transactional

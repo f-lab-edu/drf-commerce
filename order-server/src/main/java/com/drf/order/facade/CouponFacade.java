@@ -1,4 +1,4 @@
-package com.drf.order.service;
+package com.drf.order.facade;
 
 import com.drf.common.exception.BusinessException;
 import com.drf.order.client.CouponClient;
@@ -14,6 +14,7 @@ import com.drf.order.model.request.CartCouponAvailableRequest;
 import com.drf.order.model.request.ProductCouponApplyRequest;
 import com.drf.order.model.request.ProductCouponAvailableRequest;
 import com.drf.order.model.response.ProductCouponApplyResponse;
+import com.drf.order.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
