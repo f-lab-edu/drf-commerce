@@ -1,6 +1,7 @@
 package com.drf.order.client;
 
 import com.drf.common.model.CommonResponse;
+import com.drf.order.client.dto.request.CouponReserveRequest;
 import com.drf.order.client.dto.request.InternalCartCouponRequest;
 import com.drf.order.client.dto.request.InternalProductCouponRequest;
 import com.drf.order.client.dto.response.InternalCartCouponAvailableListResponse;
@@ -8,6 +9,7 @@ import com.drf.order.client.dto.response.InternalCartCouponCalculateResponse;
 import com.drf.order.client.dto.response.InternalProductCouponListResponse;
 import com.drf.order.client.dto.response.ProductCouponCalculateResponse;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,4 +32,14 @@ public interface CouponClient {
     CommonResponse<ProductCouponCalculateResponse> calculateProductCoupon(
             @PathVariable long memberCouponId,
             @RequestBody InternalProductCouponRequest request);
+
+    @PostMapping("/internal/coupons/{memberCouponId}/reserve")
+    CommonResponse<Void> reserveCoupon(
+            @PathVariable long memberCouponId,
+            @RequestBody CouponReserveRequest request);
+
+    @DeleteMapping("/internal/coupons/{memberCouponId}/reserve")
+    CommonResponse<Void> releaseCoupon(
+            @PathVariable long memberCouponId,
+            @RequestBody CouponReserveRequest request);
 }

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,5 +29,19 @@ public class InternalCouponService {
     public MemberCoupon getUnusedMemberCoupon(long memberId, long memberCouponId) {
         return memberCouponRepository.findByIdAndMemberIdAndStatus(memberCouponId, memberId, MemberCouponStatus.UNUSED)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_COUPON_NOT_FOUND));
+    }
+
+    @Transactional
+    public void reserveCoupon(long memberCouponId, long memberId) {
+        if (memberCouponRepository.reserve(memberCouponId, memberId, LocalDateTime.now()) == 0) {
+            throw new BusinessException(ErrorCode.COUPON_RESERVE_FAILED);
+        }
+    }
+
+    @Transactional
+    public void releaseCoupon(long memberCouponId, long memberId) {
+        if (memberCouponRepository.release(memberCouponId, memberId) == 0) {
+            throw new BusinessException(ErrorCode.COUPON_RELEASE_FAILED);
+        }
     }
 }

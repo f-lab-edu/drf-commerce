@@ -54,6 +54,14 @@ public class InternalCouponFacade {
         return new ProductCouponCalculateResponse(true, result.coupons().getFirst().getDiscountAmount());
     }
 
+    public void reserveCoupon(long memberCouponId, long memberId) {
+        internalCouponService.reserveCoupon(memberCouponId, memberId);
+    }
+
+    public void releaseCoupon(long memberCouponId, long memberId) {
+        internalCouponService.releaseCoupon(memberCouponId, memberId);
+    }
+
     public InternalProductCouponListResponse getAvailableProductCoupons(InternalProductCouponRequest request) {
         List<MemberCoupon> memberCoupons = internalCouponService.getUnusedCouponsByType(request.memberId(), ApplyType.PRODUCT);
 

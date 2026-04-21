@@ -8,7 +8,10 @@ import com.drf.coupon.service.CouponFacade;
 import com.drf.coupon.service.CouponService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -32,17 +35,4 @@ public class CouponController {
         return ResponseEntity.ok(CommonResponse.success(response));
     }
 
-    @PatchMapping("/members/me/coupons/{memberCouponId}/reserve")
-    public ResponseEntity<CommonResponse<Void>> reserveCoupon(
-            AuthInfo authInfo, @PathVariable Long memberCouponId) {
-        couponService.reserveCoupon(memberCouponId, authInfo.id());
-        return ResponseEntity.ok().build();
-    }
-
-    @PatchMapping("/members/me/coupons/{memberCouponId}/release")
-    public ResponseEntity<CommonResponse<Void>> releaseCoupon(
-            AuthInfo authInfo, @PathVariable Long memberCouponId) {
-        couponService.releaseCoupon(memberCouponId, authInfo.id());
-        return ResponseEntity.ok().build();
-    }
 }
