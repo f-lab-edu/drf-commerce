@@ -1,6 +1,5 @@
-package com.drf.order.idempotency;
+package com.drf.common.idempotency;
 
-import com.drf.common.idempotency.IdempotencyLock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;

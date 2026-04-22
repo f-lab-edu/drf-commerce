@@ -1,6 +1,5 @@
-package com.drf.product.entity;
+package com.drf.common.entity;
 
-import com.drf.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
