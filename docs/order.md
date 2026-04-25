@@ -161,7 +161,8 @@ Idempotency-Key: {client-generated-uuid}   # 필수 헤더, 누락 시 400
 
 - **생성 주체**: 클라이언트 (UUID)
 - **전달 방식**: `Idempotency-Key` 헤더 (필수, 누락 시 400)
-- **처리**: `IdempotencyAspect` (common-module) 적용, order-server에 `IdempotencyStore` / `IdempotencyLock` 구현체 추가 필요
+- **처리**: `IdempotencyAspect` 적용. **Redis 분산 락(IdempotencyLock)**을 사용하여 동일 키에 대한 동시 진입을 차단하고, DB에 처리 결과를 저장하여 중복 실행을
+  방지합니다.
 - 동일 `Idempotency-Key`로 재요청 시 캐싱된 응답 반환, 비즈니스 로직 재실행 없음
 
 ### 주문 서버 → 결제 서버
@@ -175,20 +176,21 @@ Idempotency-Key: {client-generated-uuid}   # 필수 헤더, 누락 시 400
 ## 5. 주문 생성 플로우
 
 ```
-1. 멱등성 체크 (IdempotencyAspect)
-2. 가격 재검증
+1. 멱등성 체크 및 분산 락 점유 (IdempotencyAspect)
+2. 장바구니 상품 조회 및 소유권 검증 (CartService)
+3. 가격 재검증
    - cart_item 기반 서버 재계산 (상품 할인가 + 쿠폰 할인 + 배송비)
    - expectedAmount 불일치 시 400 (가격 변동 안내)
-3. member-server에서 배송지 스냅샷 조회
-4. 주문 Row 생성 (status: PENDING, 주문번호 TSID 발급, 배송지 스냅샷 저장)
-5. 재고 선점 (product-server)
+4. member-server에서 배송지 스냅샷 조회
+5. 주문 Row 생성 (status: PENDING, 주문번호 TSID 발급, 배송지 스냅샷 저장)
+6. 재고 선점 (product-server)
    - 실패 시 → PAYMENT_FAILED 처리 후 종료
-6. 쿠폰 선점 (coupon-server, RESERVED 상태)
+7. 쿠폰 선점 (coupon-server, RESERVED 상태)
    - 실패 시 → 재고 선점 해제 → PAYMENT_FAILED 처리 후 종료
-7. 결제 요청 (payment-server, 동기)
+8. 결제 요청 (payment-server, 동기)
    - 실패 / 타임아웃 → 쿠폰 선점 해제 + 재고 선점 해제 → PAYMENT_FAILED 처리 후 종료
    - 성공 → 주문 상태 PAID 저장
-8. 카프카 결제 완료 이벤트 발행
+9. 주문 완료 처리 및 Outbox 저장 (트랜잭션 커밋 후 비동기 전파)
 ```
 
 ---
@@ -206,7 +208,23 @@ Idempotency-Key: {client-generated-uuid}   # 필수 헤더, 누락 시 400
 
 ---
 
-## 7. 결제 완료 이벤트 소비
+## 7. 이벤트 발행 정합성 (Transactional Outbox 패턴)
+
+결제 성공 후 주문 상태 변경(`PAID`)과 후속 도메인으로의 이벤트 전파 간의 원자성을 보장하기 위해 Transactional Outbox 패턴을 적용합니다.
+
+### 7-1. 비즈니스 로직과 발행 로직의 원자적 결합
+
+- **Transaction Integrity**: 주문 상태 업데이트(`order.status = 'PAID'`)와 이벤트 데이터의 영속화(Outbox Table Insert)를 하나의 로컬 DB 트랜잭션으로 묶어
+  처리합니다. 이를 통해 "상태는 바뀌었는데 이벤트는 나가지 않는" 불일치 상황을 원천 차단합니다.
+
+### 7-2. 장애 전이 방지 (Fault Tolerance)
+
+- **Decoupled Delivery**: 애플리케이션 로직 내부에서 Kafka로 직접 이벤트를 발행하지 않고, 인프라 레이어(CDC 또는 독립적인 Relay)에 위임하여 Kafka 장애가 비즈니스 트랜잭션에
+  영향을 주지 않도록 설계합니다.
+
+---
+
+## 8. 결제 완료 이벤트 소비
 
 결제 완료 이벤트 발행 후 각 서버가 비동기 소비:
 
@@ -216,20 +234,18 @@ Idempotency-Key: {client-generated-uuid}   # 필수 헤더, 누락 시 400
 | order-server (cart 모듈) | 주문된 cartItemIds 장바구니에서 삭제 |
 | coupon-server          | 주문에 사용된 쿠폰 USED 처리        |
 
-- 이벤트 발행은 카프카 직접 발행 (추후 아웃박스 고려)
+- **이벤트 전파 방식**: Transactional Outbox 패턴을 통한 비동기 전파 (At-least-once 보장)
+
+## 9. PENDING 만료 처리 (Zombie Order Recovery)
+
+- **TTL 정책**: 주문 생성 후 **5분** 이내에 결제가 완료되지 않은 `PENDING` 주문을 무효화합니다.
+- **실행 주기**: 스케줄러가 **1분 주기**로 미결제 주문을 탐색하여 처리합니다.
+- **최대 지연 시간**: 이론적으로 주문 생성 시점부터 **최대 6분** 이내에는 미결제 재고 및 쿠폰이 안전하게 회수되어 다른 사용자가 사용할 수 있도록 보장합니다.
+- **회수 로직**: 대상 주문에 대해 쿠폰 선점 해제 + 재고 선점 해제 API를 호출한 뒤, 최종적으로 주문 상태를 `EXPIRED`로 변경합니다.
 
 ---
 
-## 8. PENDING 만료 처리
-
-- PENDING 상태로 일정 시간(예: 30분) 초과한 주문을 스케줄러가 주기적으로 조회
-- 각 주문에 대해 쿠폰 선점 해제 + 재고 선점 해제 → 상태 EXPIRED 처리
-- PENDING 중복 허용: 동일 회원이 여러 PENDING 주문 보유 가능
-    - 동일 쿠폰/재고 경합은 선점 단계에서 자연 충돌 처리
-
----
-
-## 9. 부분 취소 / 반품 환불 정책
+## 10. 부분 취소 / 반품 환불 정책
 
 ### 반품 환불
 
@@ -237,6 +253,15 @@ Idempotency-Key: {client-generated-uuid}   # 필수 헤더, 누락 시 400
 - 반품 회수 확인 후 환불 처리: `order_event(RETURN_COMPLETED)` + `payment_event(PARTIAL_REFUND or FULL_REFUND)` 생성,
   `order_item.status → RETURNED`
 - 환불 금액 계산은 아래 취소 정책과 동일하게 적용
+
+### 배송비 회수 정책 (무료 배송 조건 재검증)
+
+- **원칙**: 부분 취소 후 잔여 주문 금액(Net Price 기준)이 무료 배송 기준 미만이 될 경우, 최초 면제받았던 배송비를 환불 금액에서 차감합니다.
+- **로직**: `환불액 = 취소 상품의 final_amount - 최초 면제된 배송비`
+- **예시**: (무료 배송 기준 5만원, 배송비 3천원)
+  - 3만원 상품 2개 구매 (총 6만원, 배송비 0원)
+  - 3만원 상품 1개 취소 시: `30,000 - 3,000 = 27,000원` 환불
+  - 결과적으로 고객은 상품 1개(3만원) + 배송비(3천원) = 33,000원을 지불한 상태가 됨.
 
 ### 상품 쿠폰 적용 아이템 취소
 
@@ -266,7 +291,7 @@ Idempotency-Key: {client-generated-uuid}   # 필수 헤더, 누락 시 400
 
 ---
 
-## 10. 취소 API
+## 11. 취소 API
 
 ### 요청
 
@@ -299,7 +324,7 @@ POST /orders/{orderId}/cancel
 
 ---
 
-## 11. 반품 API
+## 12. 반품 API
 
 ### 반품 요청
 
@@ -353,7 +378,7 @@ POST /admin/orders/{orderId}/returns/complete
 
 ---
 
-## 12. 배송 상태 업데이트 (이벤트 소비)
+## 13. 배송 상태 업데이트 (이벤트 소비)
 
 - 배송 도메인이 외부 배송사로부터 폴링 또는 웹훅으로 상태 수신
 - 배송 도메인이 배송 상태 변경 이벤트 발행
@@ -362,7 +387,7 @@ POST /admin/orders/{orderId}/returns/complete
 
 ---
 
-## 13. 환불 실패 처리 정책
+## 14. 환불 실패 처리 정책
 
 - `payment.status`는 `REFUND_REQUESTED` 유지
 - `payment_event(REFUND_FAILED)` 기록
@@ -371,7 +396,7 @@ POST /admin/orders/{orderId}/returns/complete
 
 ---
 
-## 14. 테이블 설계
+## 15. 테이블 설계
 
 ```sql
 CREATE TABLE `order` (

@@ -40,14 +40,12 @@
     1. `DECR product:stock:{pid}`: 실시간 가용 재고 차감.
     2. `HSET order:resv:{oid} {pid} {qty}`: 주문 중심 증빙 저장 (보상 스케줄러용).
     3. `HSET product:resv_list:{pid} {oid} {qty}`: 상품 중심 인덱스 저장 (새벽 보정 배치용).
-  - 선점 시도 시 Redis 키가 존재하지 않을 경우, `product:lock:{id}` 분산 락을 획득하여 단 하나의 요청만 DB에서 재고를 읽어 Redis를 채우도록 제어(Single-flight)
-    합니다.
 
 ### 3-2. 2단계: 재고 확정 (Confirmation - MySQL)
 
 
 - **시점**: 결제 완료 이벤트 소비 시 (`OrderEventProcessor.processPaymentCompleted`)
-- **기술**: DB 원자적 업데이트 및 Redis 증명 케 제거
+- **기술**: DB 원자적 업데이트 및 Redis 증명 제거
 - **설계 결정**:
   - DB 업데이트 시 `WHERE stock >= :quantity` 조건을 포함하여 최종 정합성 방어.
   - DB 재고 차감 트랜잭션 **내부**에서 레디스 증빙 삭제를 수행합니다.
@@ -127,13 +125,13 @@
 - **목적**: 누적된 미세 오차를 제거하고 DB(진실의 원천)와 Redis의 상태를 강제 동기화.
 - **실행 전략**:
   - **Algorithm (Snapshot Sync with DB Lock)**:
-    1. **DB Lock**: 특정 상품에 대해 `SELECT ... FOR UPDATE`로 DB 행 잠금 획득. 이로써 해당 상품의 '결제 완료(DB 반영)' 흐름을 일시 동결합니다.
-    2. **Data Snapshot**: 고정된 DB 재고($S_{db}$)와 Redis 선점 리스트($Q_{proof}$)를 조회하여 `기대값 = S_{db} - Q_{proof}` 산출.
-    3. **Atomic Correction**: Lua 스크립트를 통해 `(기대값 - 실시간 Redis 재고)` 만큼만 `INCRBY` 반영.
-    4. **Unlock**: 트랜잭션 종료 및 락 해제.
+    1. 특정 상품에 대해 `SELECT ... FOR UPDATE`로 DB 행 잠금 획득. 이로써 해당 상품의 '결제 완료(DB 반영)' 흐름을 일시 동결합니다.
+    2. 고정된 DB 재고($S_{db}$)와 Redis 선점 리스트($Q_{proof}$)를 조회하여 `기대값 = S_{db} - Q_{proof}` 산출.
+    3. Lua 스크립트를 통해 `(기대값 - 실시간 Redis 재고)` 만큼만 `INCRBY` 반영.
+    4. 트랜잭션 종료 및 락 해제.
 - **설계 장점**:
-  - **Zero Blurry Snapshot**: DB 락을 통해 재고가 Redis에서 DB로 전이되는 찰나의 순간을 고정함으로써, 분산 환경에서도 완벽하게 일치하는 스냅샷을 기반으로 보정 수행.
-  - **Reservation Continuity**: 실시간 '주문 선점' 트래픽은 DB 락과 무관하게 Redis에서 중단 없이 처리됨.
+  - DB 락을 통해 재고가 Redis에서 DB로 전이되는 찰나의 순간을 고정함으로써, 분산 환경에서도 완벽하게 일치하는 스냅샷을 기반으로 보정 수행.
+  - 실시간 '주문 선점' 트래픽은 DB 락과 무관하게 Redis에서 중단 없이 처리됨.
 
 ### 6-6. 배치 처리 시의 부분 실패
 
