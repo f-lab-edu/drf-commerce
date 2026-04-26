@@ -68,7 +68,7 @@ sequenceDiagram
 
 ## 2. 주문 / 결제 상태 모델
 
-### order.status (결제/클레임)
+### order.status (주문 생명주기)
 
 ```
 PENDING → PAID → PARTIAL_CANCELLED (일부 취소 발생)
@@ -89,9 +89,9 @@ PENDING → PAID → PARTIAL_CANCELLED (일부 취소 발생)
 ### order_item.status (아이템 생명주기)
 
 ```
-PENDING → ORDERED → PREPARING → SHIPPING → DELIVERED
-                  → CANCELLED
-                  → RETURN_REQUESTED → RETURNED
+PENDING → PAID → PREPARING → SHIPPING → DELIVERED
+               → CANCELLED
+               → RETURN_REQUESTED → RETURNED
         → EXPIRED
         → PAYMENT_FAILED
 ```
@@ -99,7 +99,7 @@ PENDING → ORDERED → PREPARING → SHIPPING → DELIVERED
 | 상태               | 설명                          |
 |------------------|-----------------------------|
 | PENDING          | 주문 생성 직후, 결제 완료 전           |
-| ORDERED          | 결제 완료, 처리 대기                |
+| PAID             | 결제 완료, 처리 대기                |
 | PREPARING        | 상품 준비 중                     |
 | SHIPPING         | 배송 중                        |
 | DELIVERED        | 배송 완료                       |
@@ -107,9 +107,9 @@ PENDING → ORDERED → PREPARING → SHIPPING → DELIVERED
 | RETURN_REQUESTED | 반품 요청 (회수 중)                |
 | RETURNED         | 반품 완료                       |
 | EXPIRED          | PENDING TTL 초과로 스케줄러가 만료 처리 |
-| PAYMENT_FAILED   | 결제 실패로 주문 불성립               |
+| PAYMENT_FAILED   | 결제 실패                       |
 
-> 아이템마다 배송 일정이 다를 수 있으므로 배송 상태는 order_item이 진실의 원천(source of truth).  
+> 아이템마다 배송 일정이 다를 수 있으므로 배송 상태는 order_item에서 관리  
 > order 레벨 배송 현황이 필요한 경우 item 상태를 집계하여 계산한다.
 
 ---
@@ -432,7 +432,7 @@ CREATE TABLE order_item (
   order_coupon_discount_amount   INT          NOT NULL DEFAULT 0 COMMENT '주문 쿠폰 안분액',
   final_amount                   INT          NOT NULL COMMENT 'discounted_price * quantity - product_coupon_discount - order_coupon_discount',
   member_coupon_id               BIGINT       DEFAULT NULL COMMENT '적용된 상품 쿠폰',
-  status                         VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, ORDERED, PREPARING, SHIPPING, DELIVERED, CANCELLED, EXPIRED, PAYMENT_FAILED, RETURN_REQUESTED, RETURNED',
+  status                         VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, PAID, PREPARING, SHIPPING, DELIVERED, CANCELLED, EXPIRED, PAYMENT_FAILED, RETURN_REQUESTED, RETURNED',
   created_at                     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at                     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (order_id) REFERENCES `order`(id)
@@ -447,7 +447,7 @@ CREATE TABLE order_event (
   FOREIGN KEY (order_id) REFERENCES `order`(id)
 );
 
-CREATE TABLE order_event_item (
+CREATE TABLE order_item_event (
   id             BIGINT   AUTO_INCREMENT PRIMARY KEY,
   order_event_id BIGINT   NOT NULL,
   order_item_id  BIGINT   NOT NULL,
@@ -495,7 +495,7 @@ order.final_amount            = SUM(order_item.final_amount) + delivery_fee
 
 | 이벤트      | order.status      | order_event               | order_event_item | payment.status               | payment_event                     |
 |----------|-------------------|---------------------------|------------------|------------------------------|-----------------------------------|
-| 결제 완료    | PAID              | ORDER_CREATED             | -                | PAID                         | PAYMENT_COMPLETED                 |
+| 결제 완료    | PAID              | ORDER_CREATED             | 전체 아이템 row       | PAID                         | PAYMENT_COMPLETED                 |
 | 부분 취소    | PARTIAL_CANCELLED | ORDER_PARTIALLY_CANCELLED | 취소 아이템 row       | REFUND_REQUESTED             | REFUND_REQUESTED                  |
 | 전체 취소    | CANCELLED         | ORDER_CANCELLED           | 전체 아이템 row       | REFUND_REQUESTED             | REFUND_REQUESTED                  |
 | 부분 환불 완료 | -                 | -                         | -                | PARTIAL_REFUNDED             | PARTIAL_REFUNDED                  |
