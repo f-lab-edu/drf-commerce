@@ -5,10 +5,6 @@ import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
 import com.drf.product.entity.ProductStatus;
-import com.drf.product.entity.ProductStock;
-import com.drf.product.event.ProductCreatedEvent;
-import com.drf.product.event.ProductDeletedEvent;
-import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductBatchRequest;
 import com.drf.product.model.request.ProductCreateRequest;
 import com.drf.product.model.request.ProductUpdateRequest;
@@ -17,9 +13,7 @@ import com.drf.product.model.response.ProductDetailResponse;
 import com.drf.product.model.response.ProductListResponse;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
-import com.drf.product.repository.ProductStockRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,8 +28,6 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-    private final ProductStockRepository productStockRepository;
-    private final ApplicationEventPublisher eventPublisher;
 
 
     @Transactional
@@ -51,11 +42,6 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        ProductStock productStock = ProductStock.create(savedProduct, request.stock());
-        productStockRepository.save(productStock);
-
-        eventPublisher.publishEvent(new ProductCreatedEvent(savedProduct.getId(), request.stock()));
-
         return savedProduct.getId();
     }
 
@@ -65,14 +51,6 @@ public class ProductService {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-
-        if (request.stock() != null) {
-            ProductStock productStock = productStockRepository.findById(id)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-
-            productStock.updateStock(request.stock());
-            eventPublisher.publishEvent(new ProductUpdatedEvent(product.getId(), request.stock()));
-        }
 
         Category category = null;
         if (request.categoryId() != null) {
@@ -92,17 +70,13 @@ public class ProductService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
         product.delete();
-
-        eventPublisher.publishEvent(new ProductDeletedEvent(id));
     }
 
     @Transactional(readOnly = true)
     public ProductDetailResponse getProduct(long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        ProductStock productStock = productStockRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-        return ProductDetailResponse.from(product, productStock);
+        return ProductDetailResponse.from(product);
     }
 
     private static List<Long> buildCategoryPath(Category category) {
@@ -139,7 +113,7 @@ public class ProductService {
     public Page<ProductListResponse> searchProductsByName(String name, Pageable pageable) {
         Page<Product> products = productRepository.findByNameContainingAndStatusNot(
                 name, ProductStatus.DELETED, pageable);
-        return mapToProductListResponse(products);
+        return products.map(ProductListResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -149,7 +123,7 @@ public class ProductService {
         Set<Long> categoryIds = collectDescendantCategoryIds(categoryId);
         Page<Product> products = productRepository.findByCategoryIdInAndStatusNot(
                 categoryIds, ProductStatus.DELETED, pageable);
-        return mapToProductListResponse(products);
+        return products.map(ProductListResponse::from);
     }
 
     private Set<Long> collectDescendantCategoryIds(long rootId) {
@@ -164,13 +138,6 @@ public class ProductService {
                     .forEach(queue::add);
         }
         return ids;
-    }
-
-    private Page<ProductListResponse> mapToProductListResponse(Page<Product> products) {
-        List<Long> ids = products.getContent().stream().map(Product::getId).toList();
-        Map<Long, ProductStock> stockMap = productStockRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(ProductStock::getProductId, ps -> ps));
-        return products.map(p -> ProductListResponse.from(p, stockMap.get(p.getId())));
     }
 
     private void validateDateRange(LocalDateTime startAt, LocalDateTime endAt) {

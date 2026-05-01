@@ -17,8 +17,7 @@ public record InternalProductResponse(
         int discountedPrice,
         long categoryId,
         List<Long> categoryPath,
-        ProductStatus status,
-        int stock
+        ProductStatus status
 ) {
 
     public static InternalProductResponse from(Product product, int discountAmount, int discountedPrice, List<Long> categoryPath) {
@@ -33,7 +32,6 @@ public record InternalProductResponse(
                 .discountAmount(discountAmount)
                 .discountedPrice(discountedPrice)
                 .status(product.getStatus())
-                .stock(product.getStock().getStock())
                 .build();
     }
 }

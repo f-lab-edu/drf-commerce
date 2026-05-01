@@ -15,9 +15,6 @@ public record ProductUpdateRequest(
         String name,
 
         @Min(0)
-        Integer stock,
-
-        @Min(0)
         Integer price,
 
         @Size(min = 1)

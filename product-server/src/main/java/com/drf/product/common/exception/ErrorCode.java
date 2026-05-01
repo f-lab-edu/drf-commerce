@@ -18,7 +18,6 @@ public enum ErrorCode implements ErrorCodeSpec {
     CATEGORY_HAS_CHILDREN(HttpStatus.CONFLICT, "하위 카테고리가 존재하여 삭제할 수 없습니다."),
     CATEGORY_HAS_PRODUCTS(HttpStatus.CONFLICT, "상품이 존재하여 삭제할 수 없습니다."),
 
-    INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "재고가 부족합니다."),
     ;
     private final HttpStatus status;
     private final String message;

@@ -2,7 +2,6 @@ package com.drf.product.model.response;
 
 import com.drf.product.entity.Product;
 import com.drf.product.entity.ProductStatus;
-import com.drf.product.entity.ProductStock;
 
 import java.time.LocalDateTime;
 
@@ -13,10 +12,9 @@ public record ProductListResponse(
         int price,
         ProductStatus status,
         int discountRate,
-        int stock,
         LocalDateTime createdAt
 ) {
-    public static ProductListResponse from(Product product, ProductStock productStock) {
+    public static ProductListResponse from(Product product) {
         return new ProductListResponse(
                 product.getId(),
                 product.getCategory().getName(),
@@ -24,7 +22,6 @@ public record ProductListResponse(
                 product.getPrice(),
                 product.getStatus(),
                 product.getDiscountRate(),
-                productStock != null ? productStock.getStock() : 0,
                 product.getCreatedAt()
         );
     }

@@ -5,17 +5,12 @@ import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
 import com.drf.product.entity.ProductStatus;
-import com.drf.product.entity.ProductStock;
-import com.drf.product.event.ProductCreatedEvent;
-import com.drf.product.event.ProductDeletedEvent;
-import com.drf.product.event.ProductUpdatedEvent;
 import com.drf.product.model.request.ProductCreateRequest;
 import com.drf.product.model.request.ProductUpdateRequest;
 import com.drf.product.model.response.ProductDetailResponse;
 import com.drf.product.model.response.ProductListResponse;
 import com.drf.product.repository.CategoryRepository;
 import com.drf.product.repository.ProductRepository;
-import com.drf.product.repository.ProductStockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -54,12 +48,6 @@ public class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
 
-    @Mock
-    private ProductStockRepository productStockRepository;
-
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
-
 
     @Nested
     @DisplayName("상품 등록")
@@ -72,7 +60,6 @@ public class ProductServiceTest {
             request = ProductCreateRequest.builder()
                     .categoryId(1L)
                     .name("상품명")
-                    .stock(100)
                     .price(10000)
                     .description("상품 설명")
                     .discountRate(10)
@@ -113,8 +100,6 @@ public class ProductServiceTest {
             // then
             then(categoryRepository).should().findById(request.categoryId());
             then(productRepository).should().save(any(Product.class));
-            then(productStockRepository).should().save(any(ProductStock.class));
-            then(eventPublisher).should().publishEvent(any(ProductCreatedEvent.class));
         }
 
         @Test
@@ -124,7 +109,6 @@ public class ProductServiceTest {
             request = ProductCreateRequest.builder()
                     .categoryId(1L)
                     .name("상품명")
-                    .stock(100)
                     .price(10000)
                     .description("상품 설명")
                     .discountRate(10)
@@ -145,7 +129,6 @@ public class ProductServiceTest {
             request = ProductCreateRequest.builder()
                     .categoryId(1L)
                     .name("상품명")
-                    .stock(100)
                     .price(10000)
                     .description("상품 설명")
                     .discountRate(10)
@@ -174,7 +157,6 @@ public class ProductServiceTest {
                     .isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
 
             then(productRepository).should(never()).save(any());
-            then(productStockRepository).should(never()).save(any());
         }
     }
 
@@ -207,15 +189,12 @@ public class ProductServiceTest {
                     .categoryId(2L)
                     .name("수정된 상품명")
                     .price(20000)
-                    .stock(50)
                     .build();
 
             Category newCategory = Category.builder().name("새 카테고리").build();
-            ProductStock productStock = ProductStock.create(product, 100);
 
             given(productRepository.findById(1L)).willReturn(Optional.of(product));
             given(categoryRepository.findById(2L)).willReturn(Optional.of(newCategory));
-            given(productStockRepository.findById(1L)).willReturn(Optional.of(productStock));
 
             // when
             productService.updateProduct(1L, request);
@@ -223,8 +202,6 @@ public class ProductServiceTest {
             // then
             then(productRepository).should().findById(1L);
             then(categoryRepository).should().findById(2L);
-            then(productStockRepository).should().findById(1L);
-            then(eventPublisher).should().publishEvent(any(ProductUpdatedEvent.class));
         }
 
         @Test
@@ -239,10 +216,6 @@ public class ProductServiceTest {
 
             // when
             productService.updateProduct(1L, request);
-
-            // then
-            then(productStockRepository).should(never()).findById(any());
-            then(eventPublisher).should(never()).publishEvent(any());
         }
 
         @Test
@@ -258,8 +231,6 @@ public class ProductServiceTest {
             // when & then
             assertThatThrownBy(() -> productService.updateProduct(1L, request))
                     .isInstanceOf(BusinessException.class);
-
-            then(productStockRepository).should(never()).findById(any());
         }
 
         @Test
@@ -284,7 +255,6 @@ public class ProductServiceTest {
     class GetProduct {
         private Category category;
         private Product product;
-        private ProductStock productStock;
 
         @BeforeEach
         void setUp() {
@@ -301,16 +271,13 @@ public class ProductServiceTest {
                     .status(ProductStatus.READY)
                     .discountRate(10)
                     .build();
-
-            productStock = ProductStock.create(product, 100);
         }
 
         @Test
-        @DisplayName("상품과 재고가 존재하면 상세 정보를 반환한다")
+        @DisplayName("상품이 존재하면 상세 정보를 반환한다")
         void success() {
             // given
             given(productRepository.findById(1L)).willReturn(Optional.of(product));
-            given(productStockRepository.findById(1L)).willReturn(Optional.of(productStock));
 
             // when
             ProductDetailResponse response = productService.getProduct(1L);
@@ -320,7 +287,6 @@ public class ProductServiceTest {
             assertThat(response.categoryName()).isEqualTo("카테고리");
             assertThat(response.name()).isEqualTo("상품명");
             assertThat(response.price()).isEqualTo(10000);
-            assertThat(response.stock()).isEqualTo(100);
             assertThat(response.discountRate()).isEqualTo(10);
         }
 
@@ -342,7 +308,6 @@ public class ProductServiceTest {
     class SearchProductsByName {
         private Category category;
         private Product product;
-        private ProductStock productStock;
 
         @BeforeEach
         void setUp() {
@@ -354,11 +319,6 @@ public class ProductServiceTest {
                     .price(10000)
                     .status(ProductStatus.READY)
                     .discountRate(10)
-                    .build();
-            productStock = ProductStock.builder()
-                    .productId(1L)
-                    .product(product)
-                    .stock(100)
                     .build();
         }
 
@@ -369,8 +329,6 @@ public class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
             given(productRepository.findByNameContainingAndStatusNot("상품", ProductStatus.DELETED, pageable))
                     .willReturn(new PageImpl<>(List.of(product), pageable, 1));
-            given(productStockRepository.findAllById(List.of(1L)))
-                    .willReturn(List.of(productStock));
 
             // when
             Page<ProductListResponse> result = productService.searchProductsByName("상품", pageable);
@@ -379,7 +337,6 @@ public class ProductServiceTest {
             assertThat(result.getTotalElements()).isEqualTo(1);
             assertThat(result.getContent().get(0).id()).isEqualTo(1L);
             assertThat(result.getContent().get(0).name()).isEqualTo("상품명");
-            assertThat(result.getContent().get(0).stock()).isEqualTo(100);
         }
     }
 
@@ -388,7 +345,6 @@ public class ProductServiceTest {
     class GetProductsByCategory {
         private Category category;
         private Product product;
-        private ProductStock productStock;
 
         @BeforeEach
         void setUp() {
@@ -400,11 +356,6 @@ public class ProductServiceTest {
                     .price(10000)
                     .status(ProductStatus.READY)
                     .discountRate(10)
-                    .build();
-            productStock = ProductStock.builder()
-                    .productId(1L)
-                    .product(product)
-                    .stock(100)
                     .build();
         }
 
@@ -417,8 +368,6 @@ public class ProductServiceTest {
             given(categoryRepository.findByParentId(1L)).willReturn(List.of());
             given(productRepository.findByCategoryIdInAndStatusNot(Set.of(1L), ProductStatus.DELETED, pageable))
                     .willReturn(new PageImpl<>(List.of(product), pageable, 1));
-            given(productStockRepository.findAllById(List.of(1L)))
-                    .willReturn(List.of(productStock));
 
             // when
             Page<ProductListResponse> result = productService.getProductsByCategory(1L, pageable);
@@ -441,8 +390,6 @@ public class ProductServiceTest {
             Product childProduct = Product.builder()
                     .id(2L).category(grandchild).name("최하위상품").price(5000)
                     .status(ProductStatus.READY).discountRate(0).build();
-            ProductStock childStock = ProductStock.builder()
-                    .productId(2L).product(childProduct).stock(50).build();
 
             Pageable pageable = PageRequest.of(0, 20);
             given(categoryRepository.findById(1L)).willReturn(Optional.of(parent));
@@ -451,8 +398,6 @@ public class ProductServiceTest {
             given(categoryRepository.findByParentId(3L)).willReturn(List.of());
             given(productRepository.findByCategoryIdInAndStatusNot(Set.of(1L, 2L, 3L), ProductStatus.DELETED, pageable))
                     .willReturn(new PageImpl<>(List.of(childProduct), pageable, 1));
-            given(productStockRepository.findAllById(List.of(2L)))
-                    .willReturn(List.of(childStock));
 
             // when
             Page<ProductListResponse> result = productService.getProductsByCategory(1L, pageable);
@@ -502,7 +447,6 @@ public class ProductServiceTest {
             // then
             assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETED);
             assertThat(product.getDeletedAt()).isNotNull();
-            then(eventPublisher).should().publishEvent(any(ProductDeletedEvent.class));
         }
 
         @Test

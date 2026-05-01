@@ -16,10 +16,6 @@ public record ProductCreateRequest(
 
         @Min(0)
         @NotNull
-        Integer stock,
-
-        @Min(0)
-        @NotNull
         Integer price,
 
         @NotBlank

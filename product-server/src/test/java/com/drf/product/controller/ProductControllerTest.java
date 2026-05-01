@@ -46,7 +46,6 @@ public class ProductControllerTest extends BaseControllerTest {
                     "상품 설명",
                     ProductStatus.READY,
                     10,
-                    100,
                     LocalDateTime.of(2026, 3, 1, 0, 0, 0),
                     LocalDateTime.of(2026, 4, 1, 0, 0, 0)
             );
@@ -61,7 +60,6 @@ public class ProductControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$.data.categoryName").value("카테고리"))
                     .andExpect(jsonPath("$.data.name").value("상품명"))
                     .andExpect(jsonPath("$.data.price").value(10000))
-                    .andExpect(jsonPath("$.data.stock").value(100))
                     .andExpect(jsonPath("$.data.discountRate").value(10));
         }
 
@@ -87,7 +85,7 @@ public class ProductControllerTest extends BaseControllerTest {
         @DisplayName("검색 성공")
         void searchProductsByName_success() throws Exception {
             ProductListResponse item = new ProductListResponse(
-                    1L, "카테고리", "상품명", 10000, ProductStatus.READY, 10, 100,
+                    1L, "카테고리", "상품명", 10000, ProductStatus.READY, 10,
                     LocalDateTime.of(2026, 1, 1, 0, 0, 0)
             );
             given(productService.searchProductsByName(anyString(), any()))
@@ -124,7 +122,7 @@ public class ProductControllerTest extends BaseControllerTest {
         @DisplayName("조회 성공")
         void getProductsByCategory_success() throws Exception {
             ProductListResponse item = new ProductListResponse(
-                    1L, "카테고리", "상품명", 10000, ProductStatus.READY, 10, 100,
+                    1L, "카테고리", "상품명", 10000, ProductStatus.READY, 10,
                     LocalDateTime.of(2026, 1, 1, 0, 0, 0)
             );
             given(productService.getProductsByCategory(anyLong(), any()))
