@@ -7,21 +7,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
-public record SagaDefinition<C>(List<SagaStep<C>> steps) {
+public record SagaDefinition<C>(String name, List<SagaStep<C>> steps) {
 
     public static <C> Builder<C> builder() {
         return new Builder<>();
     }
 
     public static class Builder<C> {
+        private String name;
         private final List<SagaStep<C>> steps = new ArrayList<>();
+
+        public Builder<C> name(String name) {
+            this.name = name;
+            return this;
+        }
 
         public StepBuilder<C> step(String name) {
             return new StepBuilder<>(this, name);
         }
 
         public SagaDefinition<C> build() {
-            return new SagaDefinition<>(Collections.unmodifiableList(steps));
+            if (name == null) {
+                throw new IllegalStateException("Saga name is required");
+            }
+            return new SagaDefinition<>(name, Collections.unmodifiableList(steps));
         }
 
         void addStep(SagaStep<C> step) {
@@ -36,7 +45,7 @@ public record SagaDefinition<C>(List<SagaStep<C>> steps) {
         private Consumer<C> action;
         private Consumer<C> compensation;
 
-        public StepBuilder<C> invokeLocal(Consumer<C> action) {
+        public StepBuilder<C> invoke(Consumer<C> action) {
             this.action = action;
             return this;
         }

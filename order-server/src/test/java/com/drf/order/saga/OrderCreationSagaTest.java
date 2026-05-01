@@ -59,11 +59,13 @@ class OrderCreationSagaTest {
     private OrderMemberService orderMemberService;
     @Mock
     private OrderPaymentService orderPaymentService;
+    @Mock
+    private SagaCompensationFailureService failureService;
 
     @InjectMocks
     private OrderCreationSaga orderCreationSaga;
 
-    private final SagaExecutor sagaExecutor = new SagaExecutor();
+    private final SagaExecutor sagaExecutor = new SagaExecutor(failureService);
 
     private AmountResult productCouponAmounts;
 

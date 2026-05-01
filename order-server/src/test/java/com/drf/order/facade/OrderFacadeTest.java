@@ -1,7 +1,6 @@
 package com.drf.order.facade;
 
 import com.drf.common.model.AuthInfo;
-import com.drf.order.entity.Order;
 import com.drf.order.entity.OrderStatus;
 import com.drf.order.model.dto.AmountResult;
 import com.drf.order.model.request.OrderCreateRequest;
@@ -41,30 +40,26 @@ class OrderFacadeTest {
     @InjectMocks
     private OrderFacade orderFacade;
 
-    private Order order;
     private AmountResult amounts;
 
     @BeforeEach
     void setUp() {
-        order = Order.builder()
-                .id(ORDER_ID)
-                .orderNo("ORD-TEST-001")
-                .status(OrderStatus.PAID)
-                .build();
-
         amounts = AmountResult.builder()
                 .totalAmount(23_000).productDiscountAmount(2_000)
                 .productCouponDiscountAmount(0).orderCouponDiscountAmount(0)
                 .deliveryFee(0).finalAmount(FINAL_AMOUNT).build();
 
         given(orderCreationSaga.definition()).willReturn(SagaDefinition.<OrderSagaContext>builder()
-                .step("noop").invokeLocal(c -> {})
+                .step("noop").invoke(c -> {
+                })
                 .build());
 
         // SagaExecutor.execute 호출 시 ctx에 결과 채워주는 stub
         doAnswer(invocation -> {
             OrderSagaContext ctx = invocation.getArgument(1);
-            ctx.setOrder(order);
+            ctx.setOrderId(ORDER_ID);
+            ctx.setOrderNo("ORD-TEST-001");
+            ctx.setOrderStatus(OrderStatus.PAID);
             ctx.setAmounts(amounts);
             return null;
         }).when(sagaExecutor).execute(any(), any(OrderSagaContext.class));

@@ -1,26 +1,40 @@
 package com.drf.order.saga;
 
+import com.drf.order.service.SagaCompensationFailureService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.then;
 
+
+@ExtendWith(MockitoExtension.class)
 class SagaExecutorTest {
 
-    private final SagaExecutor executor = new SagaExecutor();
+    @Mock
+    private SagaCompensationFailureService failureService;
+
+    @InjectMocks
+    private SagaExecutor executor;
+
 
     @Test
     @DisplayName("모든 step 성공 시 정방향 순서로 실행됨")
     void allStepsSucceed_executedInOrder() {
         List<String> calls = new ArrayList<>();
         SagaDefinition<Void> def = SagaDefinition.<Void>builder()
-                .step("s1").invokeLocal(c -> calls.add("s1"))
-                .step("s2").invokeLocal(c -> calls.add("s2"))
-                .step("s3").invokeLocal(c -> calls.add("s3"))
+                .step("s1").invoke(c -> calls.add("s1"))
+                .step("s2").invoke(c -> calls.add("s2"))
+                .step("s3").invoke(c -> calls.add("s3"))
                 .build();
 
         executor.execute(def, null);
@@ -33,9 +47,9 @@ class SagaExecutorTest {
     void stepFails_compensatesInReverseOrder() {
         List<String> calls = new ArrayList<>();
         SagaDefinition<Void> def = SagaDefinition.<Void>builder()
-                .step("s1").invokeLocal(c -> calls.add("s1")).withCompensation(c -> calls.add("s1-comp"))
-                .step("s2").invokeLocal(c -> calls.add("s2")).withCompensation(c -> calls.add("s2-comp"))
-                .step("s3").invokeLocal(c -> {
+                .step("s1").invoke(c -> calls.add("s1")).withCompensation(c -> calls.add("s1-comp"))
+                .step("s2").invoke(c -> calls.add("s2")).withCompensation(c -> calls.add("s2-comp"))
+                .step("s3").invoke(c -> {
                     throw new RuntimeException("fail");
                 })
                 .build();
@@ -52,11 +66,11 @@ class SagaExecutorTest {
     void compensationFails_continuesRemainingCompensations() {
         List<String> calls = new ArrayList<>();
         SagaDefinition<Void> def = SagaDefinition.<Void>builder()
-                .step("s1").invokeLocal(c -> calls.add("s1")).withCompensation(c -> calls.add("s1-comp"))
-                .step("s2").invokeLocal(c -> calls.add("s2")).withCompensation(c -> {
+                .step("s1").invoke(c -> calls.add("s1")).withCompensation(c -> calls.add("s1-comp"))
+                .step("s2").invoke(c -> calls.add("s2")).withCompensation(c -> {
                     throw new RuntimeException("compensation fail");
                 })
-                .step("s3").invokeLocal(c -> {
+                .step("s3").invoke(c -> {
                     throw new RuntimeException("original fail");
                 })
                 .build();
@@ -66,6 +80,7 @@ class SagaExecutorTest {
                 .hasMessage("original fail");
 
         assertThat(calls).containsExactly("s1", "s2", "s1-comp");
+        then(failureService).should().saveFailure(any(), any(), any(), any());
     }
 
     @Test
@@ -73,8 +88,8 @@ class SagaExecutorTest {
     void stepWithNoCompensation_skipsCompensation() {
         List<String> calls = new ArrayList<>();
         SagaDefinition<Void> def = SagaDefinition.<Void>builder()
-                .step("s1").invokeLocal(c -> calls.add("s1"))
-                .step("s2").invokeLocal(c -> {
+                .step("s1").invoke(c -> calls.add("s1"))
+                .step("s2").invoke(c -> {
                     throw new RuntimeException("fail at s2");
                 })
                 .build();
@@ -91,7 +106,7 @@ class SagaExecutorTest {
     void rethrowsOriginalException() {
         RuntimeException original = new RuntimeException("original");
         SagaDefinition<Void> def = SagaDefinition.<Void>builder()
-                .step("s1").invokeLocal(c -> {
+                .step("s1").invoke(c -> {
                     throw original;
                 })
                 .build();
@@ -108,7 +123,7 @@ class SagaExecutorTest {
         // when & then
         assertThatThrownBy(() ->
                 builder.step("Null action")
-                        .invokeLocal(null)
+                        .invoke(null)
                         .build()
         )
                 .isInstanceOf(IllegalStateException.class)

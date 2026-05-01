@@ -1,7 +1,6 @@
 package com.drf.order.facade;
 
 import com.drf.common.model.AuthInfo;
-import com.drf.order.entity.Order;
 import com.drf.order.model.request.OrderCreateRequest;
 import com.drf.order.model.response.OrderCreateResponse;
 import com.drf.order.saga.OrderCreationSaga;
@@ -20,12 +19,11 @@ public class OrderFacade {
     public OrderCreateResponse createOrder(AuthInfo authInfo, String idempotencyKey, OrderCreateRequest request) {
         OrderSagaContext ctx = new OrderSagaContext(authInfo.id(), idempotencyKey, request);
         sagaExecutor.execute(orderCreationSaga.definition(), ctx);
-        Order order = ctx.getOrder();
 
         return OrderCreateResponse.builder()
-                .orderId(order.getId())
-                .orderNo(order.getOrderNo())
-                .status(order.getStatus().name())
+                .orderId(ctx.getOrderId())
+                .orderNo(ctx.getOrderNo())
+                .status(ctx.getOrderStatus().name())
                 .finalAmount(ctx.getAmounts().finalAmount())
                 .build();
     }

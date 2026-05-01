@@ -2,6 +2,7 @@ package com.drf.order.saga;
 
 import com.drf.common.exception.BusinessException;
 import com.drf.order.common.exception.ErrorCode;
+import com.drf.order.entity.Order;
 import com.drf.order.model.dto.AmountResult;
 import com.drf.order.model.dto.CartItemsResult;
 import com.drf.order.model.dto.OrderItemData;
@@ -29,30 +30,31 @@ public class OrderCreationSaga {
     public SagaDefinition<OrderSagaContext> definition() {
         // @formatter:off
         return SagaDefinition.<OrderSagaContext>builder()
+                .name("OrderCreationSaga")
                 .step("loadCart")
-                    .invokeLocal(this::loadCart)
+                    .invoke(this::loadCart)
                 .step("loadProducts")
-                    .invokeLocal(this::loadProducts)
+                    .invoke(this::loadProducts)
                 .step("calculateDiscounts")
-                    .invokeLocal(this::calculateDiscounts)
+                    .invoke(this::calculateDiscounts)
                 .step("validateAmount")
-                    .invokeLocal(this::validateAmount)
+                    .invoke(this::validateAmount)
                 .step("loadAddress")
-                    .invokeLocal(this::loadAddress)
+                    .invoke(this::loadAddress)
 
                 .step("createOrder")
-                    .invokeLocal(this::createOrder)
+                    .invoke(this::createOrder)
                     .withCompensation(this::failOrder)
                 .step("reserveStocks")
-                    .invokeLocal(this::reserveStocks)
+                    .invoke(this::reserveStocks)
                     .withCompensation(this::releaseStocks)
                 .step("reserveCoupons")
-                    .invokeLocal(this::reserveCoupons)
+                    .invoke(this::reserveCoupons)
                     .withCompensation(this::releaseCoupons)
                 .step("pay")
-                    .invokeLocal(this::pay)
+                    .invoke(this::pay)
                 .step("completePayment")
-                    .invokeLocal(this::completePayment)
+                    .invoke(this::completePayment)
                 .build();
         // @formatter:on
     }
@@ -89,8 +91,11 @@ public class OrderCreationSaga {
         List<OrderItemData> items = ctx.getLineItems().stream()
                 .map(com.drf.order.model.dto.OrderLineItem::toOrderItemData)
                 .toList();
-        ctx.setOrder(orderService.createOrder(ctx.getMemberId(), items, ctx.getAddress(),
-                ctx.getCartItemsResult().cart().getCouponId(), ctx.getAmounts()));
+        Order order = orderService.createOrder(ctx.getMemberId(), items, ctx.getAddress(),
+                ctx.getCartItemsResult().cart().getCouponId(), ctx.getAmounts());
+        ctx.setOrderId(order.getId());
+        ctx.setOrderNo(order.getOrderNo());
+        ctx.setOrderStatus(order.getStatus());
         ctx.setReservedCouponIds(orderCouponService.collectCouponIds(ctx.getCartItemsResult().cart(), ctx.getLineItems()));
     }
 
@@ -98,7 +103,7 @@ public class OrderCreationSaga {
         try {
             orderProductService.reserveStocks(ctx.getLineItems(), ctx.getIdempotencyKey());
         } catch (Exception e) {
-            log.error("Stock reserve failed, orderId={}", ctx.getOrder().getId(), e);
+            log.error("Stock reserve failed, orderId={}", ctx.getOrderId(), e);
             throw new BusinessException(ErrorCode.ORDER_STOCK_INSUFFICIENT);
         }
     }
@@ -107,30 +112,30 @@ public class OrderCreationSaga {
         try {
             orderCouponService.reserveCoupons(ctx.getReservedCouponIds(), ctx.getMemberId());
         } catch (Exception e) {
-            log.error("Coupon reserve failed, orderId={}", ctx.getOrder().getId(), e);
+            log.error("Coupon reserve failed, orderId={}", ctx.getOrderId(), e);
             throw new BusinessException(ErrorCode.ORDER_COUPON_UNAVAILABLE);
         }
     }
 
     private void pay(OrderSagaContext ctx) {
         try {
-            orderPaymentService.pay(ctx.getOrder().getId(), ctx.getAmounts().finalAmount(),
+            orderPaymentService.pay(ctx.getOrderId(), ctx.getAmounts().finalAmount(),
                     ctx.getRequest().paymentMethodId());
         } catch (Exception e) {
-            log.error("Payment failed, orderId={}", ctx.getOrder().getId(), e);
+            log.error("Payment failed, orderId={}", ctx.getOrderId(), e);
             throw new BusinessException(ErrorCode.ORDER_PAYMENT_FAILED);
         }
     }
 
     private void completePayment(OrderSagaContext ctx) {
-        orderService.completePayment(ctx.getOrder().getId(), ctx.getMemberId(),
+        orderService.completePayment(ctx.getOrderId(), ctx.getMemberId(),
                 ctx.getRequest().cartItemIds(), ctx.getReservedCouponIds());
     }
 
     // --- 보상 메서드 ---
 
     private void failOrder(OrderSagaContext ctx) {
-        orderService.failOrder(ctx.getOrder().getId());
+        orderService.failOrder(ctx.getOrderId());
     }
 
     private void releaseStocks(OrderSagaContext ctx) {
