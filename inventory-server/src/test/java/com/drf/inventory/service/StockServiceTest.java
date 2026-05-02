@@ -13,10 +13,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Arrays;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +27,71 @@ class StockServiceTest {
 
     @Mock
     private ProductStockRedisRepository stockRedisRepository;
+
+    @Nested
+    @DisplayName("가용 재고 조회")
+    class GetStocks {
+
+        @Test
+        @DisplayName("전체 조회 성공 - 요청한 모든 상품의 가용 재고를 반환한다")
+        void success() {
+            // given
+            List<Long> productIds = List.of(1L, 2L);
+            given(stockRedisRepository.getStocks(productIds)).willReturn(List.of(100L, 200L));
+
+            // when
+            var result = stockService.getStocks(productIds);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).productId()).isEqualTo(1L);
+            assertThat(result.get(0).stock()).isEqualTo(100L);
+            assertThat(result.get(1).productId()).isEqualTo(2L);
+            assertThat(result.get(1).stock()).isEqualTo(200L);
+        }
+
+        @Test
+        @DisplayName("Redis 키가 없는 상품은 결과에서 제외된다")
+        void success_partialResult() {
+            // given
+            List<Long> productIds = List.of(1L, 999L);
+            given(stockRedisRepository.getStocks(productIds)).willReturn(Arrays.asList(100L, null));
+
+            // when
+            var result = stockService.getStocks(productIds);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).productId()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("전체 상품의 Redis 키가 없으면 빈 목록을 반환한다")
+        void success_allNull() {
+            // given
+            List<Long> productIds = List.of(1L, 2L);
+            given(stockRedisRepository.getStocks(productIds)).willReturn(Arrays.asList(null, null));
+
+            // when
+            var result = stockService.getStocks(productIds);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("빈 목록으로 요청하면 빈 목록을 반환한다")
+        void success_emptyRequest() {
+            // given
+            given(stockRedisRepository.getStocks(List.of())).willReturn(List.of());
+
+            // when
+            var result = stockService.getStocks(List.of());
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
 
     @Nested
     @DisplayName("재고 선점")
@@ -47,7 +112,7 @@ class StockServiceTest {
         }
 
         @Test
-        @DisplayName("Redis에 재고 키가 없으면 PRODUCT_NOT_FOUND 예외 발생")
+        @DisplayName("Redis에 재고 키가 없으면 STOCK_NOT_FOUND 예외 발생")
         void fail_stockKeyNotFoundInRedis() {
             // given
             long productId = 1L;
@@ -59,7 +124,7 @@ class StockServiceTest {
             // when & then
             assertThatThrownBy(() -> stockService.batchReserveStock(request))
                     .isInstanceOf(BusinessException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_FOUND);
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AVAILABLE_STOCK_NOT_FOUND);
         }
 
         @Test
@@ -75,7 +140,7 @@ class StockServiceTest {
             // when & then
             assertThatThrownBy(() -> stockService.batchReserveStock(request))
                     .isInstanceOf(BusinessException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_STOCK);
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_AVAILABLE_STOCK);
         }
     }
 

@@ -95,7 +95,7 @@ class InternalStockControllerTest extends BaseControllerTest {
             StockBatchReserveRequest request = new StockBatchReserveRequest(
                     List.of(new StockBatchReserveRequest.StockBatchReserveItem(999L, 10L)));
 
-            willThrow(new BusinessException(ErrorCode.PRODUCT_NOT_FOUND))
+            willThrow(new BusinessException(ErrorCode.AVAILABLE_STOCK_NOT_FOUND))
                     .given(stockService).batchReserveStock(any());
 
             // when & then
@@ -106,7 +106,7 @@ class InternalStockControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.message").value(ErrorCode.PRODUCT_NOT_FOUND.getMessage()));
+                    .andExpect(jsonPath("$.message").value(ErrorCode.AVAILABLE_STOCK_NOT_FOUND.getMessage()));
         }
 
         @Test
@@ -116,7 +116,7 @@ class InternalStockControllerTest extends BaseControllerTest {
             StockBatchReserveRequest request = new StockBatchReserveRequest(
                     List.of(new StockBatchReserveRequest.StockBatchReserveItem(1L, 9999L)));
 
-            willThrow(new BusinessException(ErrorCode.INSUFFICIENT_STOCK))
+            willThrow(new BusinessException(ErrorCode.INSUFFICIENT_AVAILABLE_STOCK))
                     .given(stockService).batchReserveStock(any());
 
             // when & then
@@ -127,7 +127,7 @@ class InternalStockControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.message").value(ErrorCode.INSUFFICIENT_STOCK.getMessage()));
+                    .andExpect(jsonPath("$.message").value(ErrorCode.INSUFFICIENT_AVAILABLE_STOCK.getMessage()));
         }
     }
 

@@ -62,10 +62,10 @@ public class StockService {
         int result = stockRedisRepository.reserveStock(productId, quantity);
 
         if (result == -1) {
-            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+            throw new BusinessException(ErrorCode.AVAILABLE_STOCK_NOT_FOUND);
         }
         if (result == -2) {
-            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
+            throw new BusinessException(ErrorCode.INSUFFICIENT_AVAILABLE_STOCK);
         }
     }
 
@@ -73,7 +73,7 @@ public class StockService {
         int result = stockRedisRepository.releaseStock(productId, quantity);
 
         if (result == -1) {
-            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+            throw new BusinessException(ErrorCode.AVAILABLE_STOCK_NOT_FOUND);
         }
     }
 }
