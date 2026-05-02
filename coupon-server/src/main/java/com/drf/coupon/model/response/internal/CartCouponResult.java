@@ -1,5 +1,6 @@
 package com.drf.coupon.model.response.internal;
 
+import com.drf.common.model.Money;
 import lombok.Getter;
 
 import java.util.List;
@@ -9,14 +10,14 @@ public class CartCouponResult {
 
     private final long memberCouponId;
     private final String name;
-    private final int discountAmount;
-    private boolean isBest;
+    private final long discountAmount;
     private final List<InternalCouponItemResult> items;
+    private boolean isBest;
 
-    public CartCouponResult(long memberCouponId, String name, int discountAmount, List<InternalCouponItemResult> items) {
+    public CartCouponResult(long memberCouponId, String name, Money discountAmount, List<InternalCouponItemResult> items) {
         this.memberCouponId = memberCouponId;
         this.name = name;
-        this.discountAmount = discountAmount;
+        this.discountAmount = discountAmount.toLong();
         this.isBest = false;
         this.items = items;
     }

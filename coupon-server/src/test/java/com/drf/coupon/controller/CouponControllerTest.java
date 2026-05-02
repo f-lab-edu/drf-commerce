@@ -104,7 +104,7 @@ class CouponControllerTest extends BaseControllerTest {
                     .discountType(DiscountType.FIXED)
                     .discountValue(3000)
                     .maxDiscountAmount(null)
-                    .minOrderAmount(10000)
+                    .minOrderAmount(10000L)
                     .minOrderQuantity(1) // 적절한 값 넣어주세요
                     .applyType(ApplyType.ORDER)
                     .applyScope(null)

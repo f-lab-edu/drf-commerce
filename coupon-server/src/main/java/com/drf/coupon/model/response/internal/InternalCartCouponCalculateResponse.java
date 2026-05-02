@@ -4,7 +4,7 @@ import java.util.List;
 
 public record InternalCartCouponCalculateResponse(
         boolean applicable,
-        int totalDiscountAmount,
+        long totalDiscountAmount,
         List<InternalCouponItemResult> items
 ) {
 }

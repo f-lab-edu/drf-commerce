@@ -89,7 +89,7 @@ public class CouponAdminService {
         coupon.delete();
     }
 
-    private void validateCouponFields(DiscountType discountType, Integer maxDiscountAmount,
+    private void validateCouponFields(DiscountType discountType, Long maxDiscountAmount,
                                       ApplyScope applyScope, Long applyTargetId,
                                       LocalDateTime validFrom, LocalDateTime validUntil) {
         if (!validUntil.isAfter(validFrom)) {

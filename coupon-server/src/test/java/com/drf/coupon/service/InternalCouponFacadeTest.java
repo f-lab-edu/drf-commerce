@@ -1,5 +1,6 @@
 package com.drf.coupon.service;
 
+import com.drf.common.model.Money;
 import com.drf.coupon.calculator.CartCouponCalculator;
 import com.drf.coupon.entity.ApplyType;
 import com.drf.coupon.entity.MemberCoupon;
@@ -43,7 +44,7 @@ class InternalCouponFacadeTest {
                 .build();
     }
 
-    private CartCouponResult couponResult(long memberCouponId, int discountAmount) {
+    private CartCouponResult couponResult(long memberCouponId, Money discountAmount) {
         return new CartCouponResult(memberCouponId, "쿠폰" + memberCouponId, discountAmount, List.of());
     }
 
@@ -71,7 +72,7 @@ class InternalCouponFacadeTest {
         @DisplayName("계산 결과 있으면 applicable: true, 할인금액 반환")
         void applicable_whenCalculatorReturnsResult() {
             MemberCoupon mc = stubMemberCoupon(1L);
-            CartCouponResult cr = couponResult(1L, 3000);
+            CartCouponResult cr = couponResult(1L, Money.of(3000));
             given(internalCouponService.getUnusedMemberCoupon(1L, 1L)).willReturn(mc);
             given(cartCouponCalculator.calculate(eq(List.of(mc)), any()))
                     .willReturn(new InternalCartCouponListResponse(List.of(cr)));
@@ -96,7 +97,7 @@ class InternalCouponFacadeTest {
         @Test
         @DisplayName("usedMemberCouponIds에 포함된 쿠폰은 usedOnOtherItem: true")
         void usedOnOtherItem_whenCouponIdInUsedList() {
-            CartCouponResult cr = couponResult(5L, 2000);
+            CartCouponResult cr = couponResult(5L, Money.of(2000));
             given(internalCouponService.getUnusedCouponsByType(1L, ApplyType.PRODUCT))
                     .willReturn(List.of(stubMemberCoupon(5L)));
             given(cartCouponCalculator.calculate(any(), any()))
@@ -112,7 +113,7 @@ class InternalCouponFacadeTest {
         @Test
         @DisplayName("usedMemberCouponIds에 없는 쿠폰은 usedOnOtherItem: false")
         void notUsedOnOtherItem_whenCouponIdNotInUsedList() {
-            CartCouponResult cr = couponResult(5L, 2000);
+            CartCouponResult cr = couponResult(5L, Money.of(2000));
             given(internalCouponService.getUnusedCouponsByType(1L, ApplyType.PRODUCT))
                     .willReturn(List.of(stubMemberCoupon(5L)));
             given(cartCouponCalculator.calculate(any(), any()))
@@ -127,7 +128,7 @@ class InternalCouponFacadeTest {
         @Test
         @DisplayName("isBest가 true인 쿠폰은 응답에도 isBest: true")
         void isBest_propagatedFromCalculatorResult() {
-            CartCouponResult cr = couponResult(5L, 2000);
+            CartCouponResult cr = couponResult(5L, Money.of(2000));
             cr.markAsBest();
             given(internalCouponService.getUnusedCouponsByType(1L, ApplyType.PRODUCT))
                     .willReturn(List.of(stubMemberCoupon(5L)));
@@ -137,7 +138,7 @@ class InternalCouponFacadeTest {
             InternalProductCouponListResponse result =
                     internalCouponFacade.getAvailableProductCoupons(request(List.of()));
 
-            assertThat(result.coupons().get(0).isBest()).isTrue();
+            assertThat(result.coupons().getFirst().isBest()).isTrue();
         }
 
         @Test

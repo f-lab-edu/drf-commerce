@@ -1,5 +1,6 @@
 package com.drf.coupon.discount;
 
+import com.drf.common.model.Money;
 import com.drf.coupon.entity.ApplyType;
 import com.drf.coupon.entity.Coupon;
 import com.drf.coupon.entity.CouponStatus;
@@ -12,10 +13,13 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class DiscountPolicyTest {
+class DiscountStrategyTest {
 
     private Coupon coupon(DiscountType discountType, int discountValue,
-                          ApplyType applyType, Long applyTargetId, Integer maxDiscountAmount) {
+                          ApplyType applyType, Long applyTargetId, Long maxDiscountAmount) {
+
+        Money _maxDiscountAmount = maxDiscountAmount != null ? Money.of(maxDiscountAmount) : null;
+
         return Coupon.builder()
                 .id(1L)
                 .name("테스트 쿠폰")
@@ -23,8 +27,8 @@ class DiscountPolicyTest {
                 .discountValue(discountValue)
                 .totalQuantity(100)
                 .issuedQuantity(0)
-                .minOrderAmount(10000)
-                .maxDiscountAmount(maxDiscountAmount)
+                .minOrderAmount(Money.of(10000))
+                .maxDiscountAmount(_maxDiscountAmount)
                 .applyType(applyType)
                 .applyTargetId(applyTargetId)
                 .maxIssuablePerMember(1)
@@ -36,40 +40,40 @@ class DiscountPolicyTest {
 
     @Nested
     @DisplayName("정액 할인 정책")
-    class FixedDiscountPolicyTest {
+    class FixedDiscountStrategyTest {
 
-        private final FixedDiscountPolicy policy = new FixedDiscountPolicy();
+        private final FixedDiscountStrategy policy = new FixedDiscountStrategy();
 
         @Test
         @DisplayName("base 금액에 관계없이 고정 금액 반환")
         void calculate_returnsFixedValue() {
             Coupon coupon = coupon(DiscountType.FIXED, 3000, ApplyType.ORDER, null, null);
 
-            assertThat(policy.calculate(coupon, 15000)).isEqualTo(3000);
-            assertThat(policy.calculate(coupon, 50000)).isEqualTo(3000);
+            assertThat(policy.calculate(coupon, Money.of(15000)).toLong()).isEqualTo(3000);
+            assertThat(policy.calculate(coupon, Money.of(50000)).toLong()).isEqualTo(3000);
         }
     }
 
     @Nested
     @DisplayName("정률 할인 정책")
-    class RateDiscountPolicyTest {
+    class RateDiscountStrategyTest {
 
-        private final RateDiscountPolicy policy = new RateDiscountPolicy();
+        private final RateDiscountStrategy policy = new RateDiscountStrategy();
 
         @Test
         @DisplayName("base 금액에 비율 적용")
         void calculate_rate() {
             Coupon coupon = coupon(DiscountType.RATE, 10, ApplyType.ORDER, null, null);
 
-            assertThat(policy.calculate(coupon, 20000)).isEqualTo(2000);
+            assertThat(policy.calculate(coupon, Money.of(20000)).toLong()).isEqualTo(2000);
         }
 
         @Test
         @DisplayName("최대 할인 금액 상한 적용")
         void calculate_capByMax() {
-            Coupon coupon = coupon(DiscountType.RATE, 10, ApplyType.ORDER, null, 5000);
+            Coupon coupon = coupon(DiscountType.RATE, 10, ApplyType.ORDER, null, 5000L);
 
-            assertThat(policy.calculate(coupon, 100000)).isEqualTo(5000);
+            assertThat(policy.calculate(coupon, Money.of(100000)).toLong()).isEqualTo(5000);
         }
 
         @Test
@@ -77,7 +81,7 @@ class DiscountPolicyTest {
         void calculate_noMax() {
             Coupon coupon = coupon(DiscountType.RATE, 10, ApplyType.ORDER, null, null);
 
-            assertThat(policy.calculate(coupon, 100000)).isEqualTo(10000);
+            assertThat(policy.calculate(coupon, Money.of(100000)).toLong()).isEqualTo(10000);
         }
     }
 

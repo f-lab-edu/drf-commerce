@@ -1,7 +1,9 @@
 package com.drf.coupon.entity;
 
+import com.drf.common.converter.MoneyConverter;
 import com.drf.common.entity.BaseTimeEntity;
 import com.drf.common.exception.BusinessException;
+import com.drf.common.model.Money;
 import com.drf.coupon.common.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,7 +30,7 @@ public class Coupon extends BaseTimeEntity {
     private DiscountType discountType;
 
     @Column(nullable = false)
-    private int discountValue;
+    private long discountValue;
 
     @Column(nullable = false)
     private int totalQuantity;
@@ -36,13 +38,15 @@ public class Coupon extends BaseTimeEntity {
     @Column(nullable = false)
     private int issuedQuantity;
 
+    @Convert(converter = MoneyConverter.class)
     @Column(nullable = false)
-    private int minOrderAmount;
+    private Money minOrderAmount;
 
     @Column(nullable = false)
     private int minOrderQuantity;
 
-    private Integer maxDiscountAmount;
+    @Convert(converter = MoneyConverter.class)
+    private Money maxDiscountAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -72,9 +76,9 @@ public class Coupon extends BaseTimeEntity {
 
     private LocalDateTime deletedAt;
 
-    public static Coupon create(String name, DiscountType discountType, int discountValue,
-                                int totalQuantity, int minOrderAmount, int minOrderQuantity,
-                                Integer maxDiscountAmount, ApplyType applyType, ApplyScope applyScope,
+    public static Coupon create(String name, DiscountType discountType, long discountValue,
+                                int totalQuantity, long minOrderAmount, int minOrderQuantity,
+                                Long maxDiscountAmount, ApplyType applyType, ApplyScope applyScope,
                                 Long applyTargetId, boolean isUnlimited, int maxIssuablePerMember,
                                 LocalDateTime validFrom, LocalDateTime validUntil) {
         return Coupon.builder()
@@ -83,9 +87,9 @@ public class Coupon extends BaseTimeEntity {
                 .discountValue(discountValue)
                 .totalQuantity(totalQuantity)
                 .issuedQuantity(0)
-                .minOrderAmount(minOrderAmount)
+                .minOrderAmount(Money.of(minOrderAmount))
                 .minOrderQuantity(minOrderQuantity)
-                .maxDiscountAmount(maxDiscountAmount)
+                .maxDiscountAmount(maxDiscountAmount != null ? Money.of(maxDiscountAmount) : null)
                 .applyType(applyType)
                 .applyScope(applyScope)
                 .applyTargetId(applyTargetId)
@@ -102,18 +106,18 @@ public class Coupon extends BaseTimeEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
-    public void update(String name, DiscountType discountType, int discountValue,
-                       int totalQuantity, int minOrderAmount, int minOrderQuantity,
-                       Integer maxDiscountAmount, ApplyType applyType, ApplyScope applyScope,
+    public void update(String name, DiscountType discountType, long discountValue,
+                       int totalQuantity, long minOrderAmount, int minOrderQuantity,
+                       Long maxDiscountAmount, ApplyType applyType, ApplyScope applyScope,
                        Long applyTargetId, boolean isUnlimited, int maxIssuablePerMember,
                        LocalDateTime validFrom, LocalDateTime validUntil) {
         this.name = name;
         this.discountType = discountType;
         this.discountValue = discountValue;
         this.totalQuantity = totalQuantity;
-        this.minOrderAmount = minOrderAmount;
+        this.minOrderAmount = Money.of(minOrderAmount);
         this.minOrderQuantity = minOrderQuantity;
-        this.maxDiscountAmount = maxDiscountAmount;
+        this.maxDiscountAmount = maxDiscountAmount != null ? Money.of(maxDiscountAmount) : null;
         this.applyType = applyType;
         this.applyScope = applyScope;
         this.applyTargetId = applyTargetId;
@@ -131,5 +135,17 @@ public class Coupon extends BaseTimeEntity {
         if (now.isBefore(validFrom) || now.isAfter(validUntil)) {
             throw new BusinessException(ErrorCode.COUPON_PERIOD_INVALID);
         }
+    }
+
+    public Long maxDiscountAmountValue() {
+        return maxDiscountAmount != null ? maxDiscountAmount.toLong() : null;
+    }
+
+    public Long minOrderAmountValue() {
+        return minOrderAmount != null ? minOrderAmount.toLong() : null;
+    }
+
+    public Money applyMaxCap(Money discount) {
+        return maxDiscountAmount != null ? discount.min(maxDiscountAmount) : discount;
     }
 }

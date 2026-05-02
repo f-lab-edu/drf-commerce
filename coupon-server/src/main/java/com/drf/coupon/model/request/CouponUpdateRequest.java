@@ -20,19 +20,19 @@ public record CouponUpdateRequest(
         DiscountType discountType,
 
         @NotNull @Min(1)
-        Integer discountValue,
+        Long discountValue,
 
         @NotNull @Min(1)
         Integer totalQuantity,
 
         @NotNull @Min(0)
-        Integer minOrderAmount,
+        Long minOrderAmount,
 
         @NotNull @Min(1)
         Integer minOrderQuantity,
 
         @Min(1)
-        Integer maxDiscountAmount,
+        Long maxDiscountAmount,
 
         @NotNull
         ApplyType applyType,

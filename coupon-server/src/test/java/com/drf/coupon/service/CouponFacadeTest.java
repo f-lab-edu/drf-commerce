@@ -1,5 +1,6 @@
 package com.drf.coupon.service;
 
+import com.drf.common.model.Money;
 import com.drf.coupon.entity.ApplyType;
 import com.drf.coupon.entity.Coupon;
 import com.drf.coupon.entity.CouponStatus;
@@ -35,7 +36,7 @@ class CouponFacadeTest {
                 .discountValue(3000)
                 .totalQuantity(100)
                 .issuedQuantity(0)
-                .minOrderAmount(10000)
+                .minOrderAmount(Money.of(10000))
                 .applyType(ApplyType.ORDER)
                 .maxIssuablePerMember(1)
                 .validFrom(LocalDateTime.now().minusDays(1))

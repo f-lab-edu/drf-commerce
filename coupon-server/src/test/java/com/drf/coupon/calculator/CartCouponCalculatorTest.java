@@ -1,5 +1,6 @@
 package com.drf.coupon.calculator;
 
+import com.drf.common.model.Money;
 import com.drf.coupon.discount.*;
 import com.drf.coupon.entity.*;
 import com.drf.coupon.model.request.internal.InternalCartCouponItemRequest;
@@ -22,13 +23,13 @@ class CartCouponCalculatorTest {
     @BeforeEach
     void setUp() {
         DiscountPolicyRegistry discountPolicyRegistry = new DiscountPolicyRegistry(
-                List.of(new FixedDiscountPolicy(), new RateDiscountPolicy()));
+                List.of(new FixedDiscountStrategy(), new RateDiscountStrategy()));
         ApplyScopeRegistry applyScopeRegistry = new ApplyScopeRegistry(
                 List.of(new AllApplyScope(), new CategoryApplyScope()));
         calculator = new CartCouponCalculator(discountPolicyRegistry, applyScopeRegistry);
     }
 
-    private Coupon fixedCoupon(int discountValue, int minOrderAmount, int minOrderQuantity,
+    private Coupon fixedCoupon(long discountValue, Money minOrderAmount, int minOrderQuantity,
                                ApplyScope scope, Long applyTargetId) {
         return Coupon.builder()
                 .id(1L).name("정액쿠폰")
@@ -43,7 +44,7 @@ class CartCouponCalculatorTest {
                 .build();
     }
 
-    private Coupon rateCoupon(int rate, Integer maxDiscount, int minOrderAmount,
+    private Coupon rateCoupon(int rate, Money maxDiscount, Money minOrderAmount,
                               ApplyScope scope, Long applyTargetId) {
         return Coupon.builder()
                 .id(2L).name("정률쿠폰")
@@ -77,7 +78,7 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("정액 쿠폰: 전체 상품에 금액 비율로 안분")
         void fixed_distributesByRatio() {
-            Coupon coupon = fixedCoupon(1000, 0, 0, ApplyScope.ALL, null);
+            Coupon coupon = fixedCoupon(1000, Money.ZERO, 0, ApplyScope.ALL, null);
             // 상품A 30000(30%), 상품B 70000(70%) → 300 + 700
             List<InternalCartCouponItemRequest> items = List.of(
                     item(1L, 1L, 30000, 1, List.of(10L)),
@@ -98,11 +99,11 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("정률 쿠폰: 전체 금액 기준 계산")
         void rate_appliesOnTotalAmount() {
-            Coupon coupon = rateCoupon(10, null, 0, ApplyScope.ALL, null);
+            Coupon coupon = rateCoupon(10, null, Money.ZERO, ApplyScope.ALL, null);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 50000, 1, List.of(10L)));
 
-            int discountAmount = calculator.calculate(List.of(memberCoupon(1L, coupon)), items)
-                    .coupons().get(0).getDiscountAmount();
+            long discountAmount = calculator.calculate(List.of(memberCoupon(1L, coupon)), items)
+                    .coupons().getFirst().getDiscountAmount();
 
             assertThat(discountAmount).isEqualTo(5000);
         }
@@ -110,11 +111,11 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("정률 쿠폰: 최대 할인 상한 적용")
         void rate_cappedByMaxDiscount() {
-            Coupon coupon = rateCoupon(10, 3000, 0, ApplyScope.ALL, null);
+            Coupon coupon = rateCoupon(10, Money.of(3000), Money.ZERO, ApplyScope.ALL, null);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 100000, 1, List.of(10L)));
 
-            int discountAmount = calculator.calculate(List.of(memberCoupon(1L, coupon)), items)
-                    .coupons().get(0).getDiscountAmount();
+            long discountAmount = calculator.calculate(List.of(memberCoupon(1L, coupon)), items)
+                    .coupons().getFirst().getDiscountAmount();
 
             assertThat(discountAmount).isEqualTo(3000);
         }
@@ -127,7 +128,7 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("매칭 상품만 appliedYn=true, 나머지 false/0원")
         void appliedYn_onlyMatchingItems() {
-            Coupon coupon = fixedCoupon(2000, 0, 0, ApplyScope.CATEGORY, 20L);
+            Coupon coupon = fixedCoupon(2000, Money.ZERO, 0, ApplyScope.CATEGORY, 20L);
             List<InternalCartCouponItemRequest> items = List.of(
                     item(1L, 1L, 30000, 1, List.of(10L, 20L, 30L)),  // 매칭
                     item(2L, 2L, 70000, 1, List.of(10L, 21L, 40L))   // 비매칭
@@ -146,7 +147,7 @@ class CartCouponCalculatorTest {
         @DisplayName("최소 주문금액은 카테고리 매칭 합계 기준 — 전체 합계가 충족해도 매칭 합계 미달이면 제외")
         void minOrderAmount_basedOnCategoryAmount() {
             // 매칭 금액 30000, 전체 100000, 최소 주문금액 50000 → 제외
-            Coupon coupon = fixedCoupon(2000, 50000, 0, ApplyScope.CATEGORY, 20L);
+            Coupon coupon = fixedCoupon(2000, Money.of(50000), 0, ApplyScope.CATEGORY, 20L);
             List<InternalCartCouponItemRequest> items = List.of(
                     item(1L, 1L, 30000, 1, List.of(10L, 20L, 30L)),
                     item(2L, 2L, 70000, 1, List.of(10L, 21L, 40L))
@@ -158,7 +159,7 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("카테고리 매칭 상품 없으면 쿠폰 제외")
         void noMatchingItems_excludedFromResult() {
-            Coupon coupon = fixedCoupon(2000, 0, 0, ApplyScope.CATEGORY, 99L);
+            Coupon coupon = fixedCoupon(2000, Money.ZERO, 0, ApplyScope.CATEGORY, 99L);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 30000, 1, List.of(10L, 20L)));
 
             assertThat(calculator.calculate(List.of(memberCoupon(1L, coupon)), items).coupons()).isEmpty();
@@ -172,7 +173,7 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("최소 주문금액 미달 시 제외")
         void belowMinOrderAmount_excluded() {
-            Coupon coupon = fixedCoupon(3000, 100000, 0, ApplyScope.ALL, null);
+            Coupon coupon = fixedCoupon(3000, Money.of(100000), 0, ApplyScope.ALL, null);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 50000, 1, List.of(10L)));
 
             assertThat(calculator.calculate(List.of(memberCoupon(1L, coupon)), items).coupons()).isEmpty();
@@ -181,7 +182,7 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("최소 수량 미달 시 제외")
         void belowMinOrderQuantity_excluded() {
-            Coupon coupon = fixedCoupon(3000, 0, 3, ApplyScope.ALL, null);
+            Coupon coupon = fixedCoupon(3000, Money.ZERO, 3, ApplyScope.ALL, null);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 50000, 2, List.of(10L)));
 
             assertThat(calculator.calculate(List.of(memberCoupon(1L, coupon)), items).coupons()).isEmpty();
@@ -194,7 +195,7 @@ class CartCouponCalculatorTest {
                     .id(1L).name("만료쿠폰")
                     .discountType(DiscountType.FIXED).discountValue(3000)
                     .totalQuantity(100).issuedQuantity(0)
-                    .minOrderAmount(0).minOrderQuantity(1)
+                    .minOrderAmount(Money.ZERO).minOrderQuantity(1)
                     .applyType(ApplyType.ORDER).applyScope(ApplyScope.ALL)
                     .isUnlimited(false).maxIssuablePerMember(1)
                     .validFrom(LocalDateTime.now().minusDays(10))
@@ -214,12 +215,12 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("여러 쿠폰 중 할인금액이 가장 큰 쿠폰이 isBest, 내림차순 정렬")
         void isBest_markedOnHighestDiscount() {
-            Coupon cheap = fixedCoupon(1000, 0, 0, ApplyScope.ALL, null);
+            Coupon cheap = fixedCoupon(1000, Money.ZERO, 0, ApplyScope.ALL, null);
             Coupon expensive = Coupon.builder()
                     .id(2L).name("5000원쿠폰")
                     .discountType(DiscountType.FIXED).discountValue(5000)
                     .totalQuantity(100).issuedQuantity(0)
-                    .minOrderAmount(0).minOrderQuantity(1)
+                    .minOrderAmount(Money.ZERO).minOrderQuantity(1)
                     .applyType(ApplyType.ORDER).applyScope(ApplyScope.ALL)
                     .isUnlimited(false).maxIssuablePerMember(1)
                     .validFrom(LocalDateTime.now().minusDays(1))
@@ -240,7 +241,7 @@ class CartCouponCalculatorTest {
         @Test
         @DisplayName("쿠폰이 하나면 그 쿠폰이 isBest")
         void isBest_singleCoupon() {
-            Coupon coupon = fixedCoupon(3000, 0, 0, ApplyScope.ALL, null);
+            Coupon coupon = fixedCoupon(3000, Money.ZERO, 0, ApplyScope.ALL, null);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 50000, 1, List.of(10L)));
 
             assertThat(calculator.calculate(List.of(memberCoupon(1L, coupon)), items)

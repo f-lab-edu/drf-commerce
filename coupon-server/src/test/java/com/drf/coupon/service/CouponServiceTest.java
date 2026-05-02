@@ -1,6 +1,7 @@
 package com.drf.coupon.service;
 
 import com.drf.common.exception.BusinessException;
+import com.drf.common.model.Money;
 import com.drf.coupon.common.exception.ErrorCode;
 import com.drf.coupon.discount.*;
 import com.drf.coupon.entity.*;
@@ -39,7 +40,7 @@ class CouponServiceTest {
 
     @Spy
     private DiscountPolicyRegistry discountPolicyRegistry = new DiscountPolicyRegistry(
-            List.of(new FixedDiscountPolicy(), new RateDiscountPolicy())
+            List.of(new FixedDiscountStrategy(), new RateDiscountStrategy())
     );
 
     @Spy
@@ -62,7 +63,7 @@ class CouponServiceTest {
                 .discountValue(3000)
                 .totalQuantity(100)
                 .issuedQuantity(0)
-                .minOrderAmount(10000)
+                .minOrderAmount(Money.of(10000))
                 .applyType(ApplyType.ORDER)
                 .maxIssuablePerMember(1)
                 .validFrom(LocalDateTime.now().minusDays(1))
@@ -94,9 +95,9 @@ class CouponServiceTest {
 
             // then
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).memberCouponId()).isEqualTo(1L);
-            assertThat(result.get(0).couponName()).isEqualTo("신규 가입 쿠폰");
-            assertThat(result.get(0).status()).isEqualTo(MemberCouponStatus.UNUSED);
+            assertThat(result.getFirst().memberCouponId()).isEqualTo(1L);
+            assertThat(result.getFirst().couponName()).isEqualTo("신규 가입 쿠폰");
+            assertThat(result.getFirst().status()).isEqualTo(MemberCouponStatus.UNUSED);
         }
 
         @Test

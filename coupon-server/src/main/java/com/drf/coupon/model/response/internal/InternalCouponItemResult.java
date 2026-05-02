@@ -4,6 +4,6 @@ public record InternalCouponItemResult(
         long cartItemId,
         long productId,
         boolean appliedYn,
-        int discountAmount
+        long discountAmount
 ) {
 }

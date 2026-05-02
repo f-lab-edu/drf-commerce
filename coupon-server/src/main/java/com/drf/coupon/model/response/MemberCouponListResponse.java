@@ -12,9 +12,9 @@ public record MemberCouponListResponse(
         long memberCouponId,
         String couponName,
         DiscountType discountType,
-        int discountValue,
-        Integer maxDiscountAmount,
-        int minOrderAmount,
+        long discountValue,
+        Long maxDiscountAmount,
+        Long minOrderAmount,
         Integer minOrderQuantity,
         ApplyType applyType,
         ApplyScope applyScope,
@@ -35,8 +35,8 @@ public record MemberCouponListResponse(
                 .couponName(coupon.getName())
                 .discountType(coupon.getDiscountType())
                 .discountValue(coupon.getDiscountValue())
-                .maxDiscountAmount(coupon.getMaxDiscountAmount())
-                .minOrderAmount(coupon.getMinOrderAmount())
+                .maxDiscountAmount(coupon.maxDiscountAmountValue())
+                .minOrderAmount(coupon.minOrderAmountValue())
                 .minOrderQuantity(coupon.getMinOrderQuantity())
                 .applyType(coupon.getApplyType())
                 .applyScope(coupon.getApplyScope())
