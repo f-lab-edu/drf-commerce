@@ -1,4 +1,4 @@
-package com.drf.product.entity;
+package com.drf.common.idempotency;
 
 import com.drf.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
@@ -17,7 +17,7 @@ public class IdempotencyKey extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "idempotency_key", nullable = false, length = 36)
+    @Column(name = "idempotency_key", nullable = false, length = 100)
     private String idempotencyKey;
 
     @Column(nullable = false, length = 50)

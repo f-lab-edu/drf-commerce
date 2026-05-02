@@ -1,9 +1,6 @@
-package com.drf.inventory.idempotency;
+package com.drf.common.idempotency;
 
-import com.drf.common.idempotency.CachedResponse;
-import com.drf.common.idempotency.IdempotencyStore;
-import com.drf.inventory.entity.IdempotencyKey;
-import com.drf.inventory.repository.IdempotencyKeyRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,7 +28,7 @@ public class IdempotencyStoreImpl implements IdempotencyStore {
         try {
             idempotencyKeyRepository.save(IdempotencyKey.create(idempotencyKey, scope, statusCode, response));
         } catch (DataIntegrityViolationException e) {
-            log.error("Failed to idempotency response", e);
+            log.error("Failed to save idempotency response", e);
         }
     }
 }

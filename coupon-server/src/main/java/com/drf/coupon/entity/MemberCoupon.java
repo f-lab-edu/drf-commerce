@@ -1,5 +1,6 @@
 package com.drf.coupon.entity;
 
+
 import com.drf.common.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,8 +1,7 @@
-package com.drf.product.idempotency;
+package com.drf.common.idempotency;
 
 import com.drf.common.exception.BusinessException;
 import com.drf.common.exception.errorcode.CommonErrorCode;
-import com.drf.common.idempotency.*;
 import com.drf.common.model.CommonResponse;
 import com.drf.common.util.JsonConverter;
 import com.fasterxml.jackson.databind.JsonNode;

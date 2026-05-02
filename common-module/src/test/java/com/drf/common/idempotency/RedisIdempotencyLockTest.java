@@ -1,4 +1,4 @@
-package com.drf.product.idempotency;
+package com.drf.common.idempotency;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

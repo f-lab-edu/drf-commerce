@@ -1,6 +1,6 @@
-package com.drf.inventory.repository;
+package com.drf.common.idempotency;
 
-import com.drf.inventory.entity.IdempotencyKey;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

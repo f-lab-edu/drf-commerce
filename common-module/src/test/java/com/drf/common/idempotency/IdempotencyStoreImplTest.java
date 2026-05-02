@@ -1,8 +1,5 @@
-package com.drf.inventory.idempotency;
+package com.drf.common.idempotency;
 
-import com.drf.common.idempotency.CachedResponse;
-import com.drf.inventory.entity.IdempotencyKey;
-import com.drf.inventory.repository.IdempotencyKeyRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
