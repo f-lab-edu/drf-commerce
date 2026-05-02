@@ -4,6 +4,8 @@ import com.drf.common.exception.BusinessException;
 import com.drf.common.exception.errorcode.CommonErrorCode;
 import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.ProductStatus;
+import com.drf.product.model.request.ProductBatchRequest;
+import com.drf.product.model.response.InternalProductResponse;
 import com.drf.product.model.response.ProductDetailResponse;
 import com.drf.product.model.response.ProductListResponse;
 import com.drf.product.service.ProductService;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
@@ -21,6 +24,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -111,6 +115,54 @@ public class ProductControllerTest extends BaseControllerTest {
                             .header("X-User-Role", "USER"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value(CommonErrorCode.INVALID_SORT_FIELD.getMessage()));
+        }
+    }
+
+    @Nested
+    @DisplayName("상품 배치 조회 (internal)")
+    class GetProductsBatch {
+
+        @Test
+        @DisplayName("유효한 ids로 조회 시 상품 목록을 반환한다")
+        void getProductsBatch_success() throws Exception {
+            InternalProductResponse response = InternalProductResponse.builder()
+                    .id(1L)
+                    .name("상품명")
+                    .description("상품 설명")
+                    .price(10000L)
+                    .discountRate(10)
+                    .discountAmount(1000L)
+                    .discountedPrice(9000L)
+                    .categoryId(1L)
+                    .categoryPath(List.of(1L))
+                    .status(ProductStatus.ON_SALE)
+                    .build();
+
+            given(productService.getProductsByIds(any(ProductBatchRequest.class)))
+                    .willReturn(List.of(response));
+
+            ProductBatchRequest request = new ProductBatchRequest(List.of(1L));
+
+            mockMvc.perform(post("/internal/products/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data[0].id").value(1L))
+                    .andExpect(jsonPath("$.data[0].name").value("상품명"))
+                    .andExpect(jsonPath("$.data[0].price").value(10000))
+                    .andExpect(jsonPath("$.data[0].discountRate").value(10))
+                    .andExpect(jsonPath("$.data[0].discountedPrice").value(9000));
+        }
+
+        @Test
+        @DisplayName("ids가 비어있으면 400을 반환한다")
+        void getProductsBatch_emptyIds() throws Exception {
+            ProductBatchRequest request = new ProductBatchRequest(List.of());
+
+            mockMvc.perform(post("/internal/products/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
         }
     }
 

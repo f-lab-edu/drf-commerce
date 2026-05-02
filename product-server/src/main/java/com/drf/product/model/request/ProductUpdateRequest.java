@@ -1,23 +1,24 @@
 package com.drf.product.model.request;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
 
 @Builder
 public record ProductUpdateRequest(
+        @NotNull
         Long categoryId,
 
-        @Size(min = 1, max = 100)
+        @NotBlank
+        @Size(max = 100)
         String name,
 
         @Min(0)
+        @NotNull
         Long price,
 
-        @Size(min = 1)
+        @NotBlank
         String description,
 
         @Min(0)

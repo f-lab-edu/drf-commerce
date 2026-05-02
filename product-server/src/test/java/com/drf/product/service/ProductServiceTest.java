@@ -6,8 +6,10 @@ import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
 import com.drf.product.entity.ProductStatus;
+import com.drf.product.model.request.ProductBatchRequest;
 import com.drf.product.model.request.ProductCreateRequest;
 import com.drf.product.model.request.ProductUpdateRequest;
+import com.drf.product.model.response.InternalProductResponse;
 import com.drf.product.model.response.ProductDetailResponse;
 import com.drf.product.model.response.ProductListResponse;
 import com.drf.product.repository.CategoryRepository;
@@ -25,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -116,6 +119,8 @@ public class ProductServiceTest {
                     .saleStartAt(LocalDateTime.of(2026, 3, 1, 0, 0, 0))
                     .build();
 
+            given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
+
             // when & then
             assertThatThrownBy(() -> productService.createProduct(request))
                     .isInstanceOf(BusinessException.class)
@@ -136,6 +141,8 @@ public class ProductServiceTest {
                     .saleStartAt(LocalDateTime.of(2026, 3, 1, 0, 0, 0))
                     .saleEndAt(LocalDateTime.of(2000, 4, 1, 0, 0, 0))
                     .build();
+
+            given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
 
             // when & then
             assertThatThrownBy(() -> productService.createProduct(request))
@@ -189,6 +196,10 @@ public class ProductServiceTest {
             request = ProductUpdateRequest.builder()
                     .categoryId(2L)
                     .name("수정된 상품명")
+                    .description("수정된 상품 설명")
+                    .discountRate(10)
+                    .saleStartAt(LocalDate.of(2026, 5, 2).atStartOfDay())
+                    .saleEndAt(LocalDate.of(2027, 5, 3).atStartOfDay())
                     .price(20000L)
                     .build();
 
@@ -203,20 +214,6 @@ public class ProductServiceTest {
             // then
             then(productRepository).should().findById(1L);
             then(categoryRepository).should().findById(2L);
-        }
-
-        @Test
-        @DisplayName("재고 없이 수정 시 재고 관련 로직 호출 안 함")
-        void updateProduct_withoutStock() {
-            // given
-            request = ProductUpdateRequest.builder()
-                    .name("수정된 상품명")
-                    .build();
-
-            given(productRepository.findById(1L)).willReturn(Optional.of(product));
-
-            // when
-            productService.updateProduct(1L, request);
         }
 
         @Test
@@ -419,6 +416,103 @@ public class ProductServiceTest {
             assertThatThrownBy(() -> productService.getProductsByCategory(99L, pageable))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CATEGORY_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("상품 배치 조회")
+    class GetProductsByIds {
+
+        private Category category;
+        private Product product1;
+        private Product product2;
+
+        @BeforeEach
+        void setUp() {
+            category = Category.builder().id(1L).name("카테고리").build();
+
+            product1 = Product.builder()
+                    .id(1L)
+                    .category(category)
+                    .name("상품1")
+                    .price(Money.of(10000))
+                    .description("설명1")
+                    .status(ProductStatus.ON_SALE)
+                    .discountRate(10)
+                    .build();
+
+            product2 = Product.builder()
+                    .id(2L)
+                    .category(category)
+                    .name("상품2")
+                    .price(Money.of(20000))
+                    .description("설명2")
+                    .status(ProductStatus.ON_SALE)
+                    .discountRate(0)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("ids에 해당하는 상품 목록을 반환한다")
+        void success() {
+            // given
+            ProductBatchRequest request = new ProductBatchRequest(List.of(1L, 2L));
+            given(productRepository.findByIdIn(List.of(1L, 2L)))
+                    .willReturn(List.of(product1, product2));
+
+            // when
+            List<InternalProductResponse> result = productService.getProductsByIds(request);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).id()).isEqualTo(1L);
+            assertThat(result.get(0).name()).isEqualTo("상품1");
+            assertThat(result.get(0).price()).isEqualTo(10000L);
+            assertThat(result.get(0).discountRate()).isEqualTo(10);
+            assertThat(result.get(0).discountAmount()).isEqualTo(1000L);
+            assertThat(result.get(0).discountedPrice()).isEqualTo(9000L);
+            assertThat(result.get(0).categoryId()).isEqualTo(1L);
+            assertThat(result.get(1).id()).isEqualTo(2L);
+        }
+
+        @Test
+        @DisplayName("조회된 상품이 없으면 빈 목록을 반환한다")
+        void success_emptyResult() {
+            // given
+            ProductBatchRequest request = new ProductBatchRequest(List.of(999L));
+            given(productRepository.findByIdIn(List.of(999L))).willReturn(List.of());
+
+            // when
+            List<InternalProductResponse> result = productService.getProductsByIds(request);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("카테고리 경로를 올바르게 반환한다")
+        void success_withCategoryPath() {
+            // given
+            Category parent = Category.builder().id(10L).name("상위카테고리").build();
+            Category child = Category.builder().id(11L).name("하위카테고리").parent(parent).build();
+            Product product = Product.builder()
+                    .id(3L)
+                    .category(child)
+                    .name("상품3")
+                    .price(Money.of(5000))
+                    .status(ProductStatus.ON_SALE)
+                    .discountRate(0)
+                    .build();
+
+            ProductBatchRequest request = new ProductBatchRequest(List.of(3L));
+            given(productRepository.findByIdIn(List.of(3L))).willReturn(List.of(product));
+
+            // when
+            List<InternalProductResponse> result = productService.getProductsByIds(request);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).categoryPath()).containsExactly(10L, 11L);
         }
     }
 

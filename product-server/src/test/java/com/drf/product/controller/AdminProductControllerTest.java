@@ -103,7 +103,7 @@ public class AdminProductControllerTest extends BaseControllerTest {
                     .saleEndAt(LocalDateTime.of(2026, 4, 1, 0, 0, 0))
                     .build();
 
-            mockMvc.perform(patch("/admin/products/1")
+            mockMvc.perform(put("/admin/products/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .header("X-User-Id", 1)
                             .header("X-User-Role", "ADMIN")

@@ -23,7 +23,7 @@ public class AdminProductController {
         return ResponseEntity.ok(CommonResponse.success(response));
     }
 
-    @PatchMapping("/admin/products/{id}")
+    @PutMapping("/admin/products/{id}")
     public ResponseEntity<Void> updateProduct(
             @PathVariable long id, @Valid @RequestBody ProductUpdateRequest request) {
         productService.updateProduct(id, request);

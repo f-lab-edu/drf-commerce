@@ -1,6 +1,7 @@
 package com.drf.product.service;
 
 import com.drf.common.exception.BusinessException;
+import com.drf.common.model.Money;
 import com.drf.product.common.exception.ErrorCode;
 import com.drf.product.entity.Category;
 import com.drf.product.entity.Product;
@@ -19,7 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -32,36 +32,29 @@ public class ProductService {
 
     @Transactional
     public Long createProduct(ProductCreateRequest request) {
-        validateDateRange(request.saleStartAt(), request.saleEndAt());
-
         Category category = categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
         Product product = Product.create(category, request.name(), request.price(), request.description(),
                 request.discountRate(), request.saleStartAt(), request.saleEndAt());
 
-        Product savedProduct = productRepository.save(product);
-
-        return savedProduct.getId();
+        return productRepository.save(product).getId();
     }
 
     @Transactional
     public void updateProduct(long id, ProductUpdateRequest request) {
-        validateDateRange(request.saleStartAt(), request.saleEndAt());
-
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        Category category = null;
-        if (request.categoryId() != null) {
-            category = categoryRepository.findById(request.categoryId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
-        }
+        Category category = categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        product.updateProduct(
-                category, request.name(), request.price(), request.description(),
-                request.discountRate(), request.saleStartAt(), request.saleEndAt()
-        );
+        product.updateCategory(category);
+        product.updateName(request.name());
+        product.updatePrice(Money.of(request.price()));
+        product.updateDescription(request.description());
+        product.updateDiscountRate(request.discountRate());
+        product.updateSaleSchedule(request.saleStartAt(), request.saleEndAt());
     }
 
     @Transactional
@@ -133,14 +126,4 @@ public class ProductService {
         return ids;
     }
 
-    private void validateDateRange(LocalDateTime startAt, LocalDateTime endAt) {
-        // 시작, 종료 기간 둘 중 하나만 있는 경우
-        if ((startAt == null) != (endAt == null)) {
-            throw new BusinessException(ErrorCode.INCOMPLETE_SALE_DATE);
-        }
-        // 종료 시간이 시작 시간보다 과거인 경우
-        if (startAt != null && !endAt.isAfter(startAt)) {
-            throw new BusinessException(ErrorCode.INVALID_SALE_DATE_RANGE);
-        }
-    }
 }

@@ -53,6 +53,10 @@ public final class Money {
         return Objects.hash(amount.stripTrailingZeros());
     }
 
+    public boolean isNegative() {
+        return amount.signum() < 0;
+    }
+
     public long toLong() {
         return amount.longValue();
     }
