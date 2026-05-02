@@ -28,7 +28,7 @@ public class ProductStockRedisRepository {
 
     private final StringRedisTemplate redisTemplate;
 
-    public void setStock(long productId, int stock) {
+    public void setStock(long productId, long stock) {
         redisTemplate.opsForValue().set(generateKey(productId), String.valueOf(stock));
     }
 
@@ -36,12 +36,12 @@ public class ProductStockRedisRepository {
         return redisTemplate.delete(generateKey(productId));
     }
 
-    public int reserveStock(long productId, int quantity) {
+    public int reserveStock(long productId, long quantity) {
         Long result = redisTemplate.execute(RESERVE_STOCK_SCRIPT, List.of(generateKey(productId)), String.valueOf(quantity));
         return result.intValue();
     }
 
-    public int releaseStock(long productId, int quantity) {
+    public int releaseStock(long productId, long quantity) {
         Long result = redisTemplate.execute(RELEASE_STOCK_SCRIPT, List.of(generateKey(productId)), String.valueOf(quantity));
         return result.intValue();
     }

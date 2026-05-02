@@ -37,7 +37,7 @@ class StockServiceTest {
         void success() {
             // given
             long productId = 1L;
-            var item = new StockBatchReserveRequest.StockBatchReserveItem(productId, 10);
+            var item = new StockBatchReserveRequest.StockBatchReserveItem(productId, 10L);
             StockBatchReserveRequest request = new StockBatchReserveRequest(List.of(item));
 
             given(stockRedisRepository.reserveStock(productId, 10)).willReturn(90);
@@ -51,7 +51,7 @@ class StockServiceTest {
         void fail_stockKeyNotFoundInRedis() {
             // given
             long productId = 1L;
-            var item = new StockBatchReserveRequest.StockBatchReserveItem(productId, 10);
+            var item = new StockBatchReserveRequest.StockBatchReserveItem(productId, 10L);
             StockBatchReserveRequest request = new StockBatchReserveRequest(List.of(item));
 
             given(stockRedisRepository.reserveStock(productId, 10)).willReturn(-1);
@@ -67,7 +67,7 @@ class StockServiceTest {
         void fail_insufficientStock() {
             // given
             long productId = 1L;
-            var item = new StockBatchReserveRequest.StockBatchReserveItem(productId, 10);
+            var item = new StockBatchReserveRequest.StockBatchReserveItem(productId, 10L);
             StockBatchReserveRequest request = new StockBatchReserveRequest(List.of(item));
 
             given(stockRedisRepository.reserveStock(productId, 10)).willReturn(-2);
@@ -88,7 +88,7 @@ class StockServiceTest {
         void success() {
             // given
             long productId = 1L;
-            var item = new StockBatchReleaseRequest.StockBatchReleaseItem(productId, 10);
+            var item = new StockBatchReleaseRequest.StockBatchReleaseItem(productId, 10L);
             StockBatchReleaseRequest request = new StockBatchReleaseRequest(List.of(item));
 
             given(stockRedisRepository.releaseStock(productId, 10)).willReturn(100);
@@ -102,7 +102,7 @@ class StockServiceTest {
         void fail_stockKeyNotFoundInRedis() {
             // given
             long productId = 1L;
-            var item = new StockBatchReleaseRequest.StockBatchReleaseItem(productId, 10);
+            var item = new StockBatchReleaseRequest.StockBatchReleaseItem(productId, 10L);
             StockBatchReleaseRequest request = new StockBatchReleaseRequest(List.of(item));
 
             given(stockRedisRepository.releaseStock(productId, 10)).willReturn(-1);

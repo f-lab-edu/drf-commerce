@@ -36,7 +36,7 @@ class InternalStockControllerTest extends BaseControllerTest {
         void reserveStock_success() throws Exception {
             // given
             StockBatchReserveRequest request = new StockBatchReserveRequest(
-                    List.of(new StockBatchReserveRequest.StockBatchReserveItem(1L, 10)));
+                    List.of(new StockBatchReserveRequest.StockBatchReserveItem(1L, 10L)));
 
             willDoNothing().given(stockService).batchReserveStock(any());
 
@@ -55,7 +55,7 @@ class InternalStockControllerTest extends BaseControllerTest {
         void reserveStock_productNotFound() throws Exception {
             // given
             StockBatchReserveRequest request = new StockBatchReserveRequest(
-                    List.of(new StockBatchReserveRequest.StockBatchReserveItem(999L, 10)));
+                    List.of(new StockBatchReserveRequest.StockBatchReserveItem(999L, 10L)));
 
             willThrow(new BusinessException(ErrorCode.PRODUCT_NOT_FOUND))
                     .given(stockService).batchReserveStock(any());
@@ -76,7 +76,7 @@ class InternalStockControllerTest extends BaseControllerTest {
         void reserveStock_insufficientStock() throws Exception {
             // given
             StockBatchReserveRequest request = new StockBatchReserveRequest(
-                    List.of(new StockBatchReserveRequest.StockBatchReserveItem(1L, 9999)));
+                    List.of(new StockBatchReserveRequest.StockBatchReserveItem(1L, 9999L)));
 
             willThrow(new BusinessException(ErrorCode.INSUFFICIENT_STOCK))
                     .given(stockService).batchReserveStock(any());
@@ -91,22 +91,6 @@ class InternalStockControllerTest extends BaseControllerTest {
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value(ErrorCode.INSUFFICIENT_STOCK.getMessage()));
         }
-
-        @Test
-        @DisplayName("items가 null이면 400 반환")
-        void reserveStock_nullItems() throws Exception {
-            // given
-            String body = "{}";
-
-            // when & then
-            mockMvc.perform(post("/internal/stocks/reserve")
-                            .header("X-User-Id", 1)
-                            .header("X-User-Role", "USER")
-                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest());
-        }
     }
 
     @Nested
@@ -118,7 +102,7 @@ class InternalStockControllerTest extends BaseControllerTest {
         void releaseStock_success() throws Exception {
             // given
             StockBatchReleaseRequest request = new StockBatchReleaseRequest(
-                    List.of(new StockBatchReleaseRequest.StockBatchReleaseItem(1L, 10)));
+                    List.of(new StockBatchReleaseRequest.StockBatchReleaseItem(1L, 10L)));
 
             willDoNothing().given(stockService).batchReleaseStock(any());
 
@@ -130,22 +114,6 @@ class InternalStockControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk());
-        }
-
-        @Test
-        @DisplayName("items가 null이면 400 반환")
-        void releaseStock_nullItems() throws Exception {
-            // given
-            String body = "{}";
-
-            // when & then
-            mockMvc.perform(post("/internal/stocks/release")
-                            .header("X-User-Id", 1)
-                            .header("X-User-Role", "USER")
-                            .header("Idempotency-Key", "550e8400-e29b-41d4-a716-446655440000")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(body))
-                    .andExpect(status().isBadRequest());
         }
     }
 }

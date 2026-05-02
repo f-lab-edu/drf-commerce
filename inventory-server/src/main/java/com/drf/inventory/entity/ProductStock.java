@@ -22,20 +22,20 @@ public class ProductStock {
     private Long productId;
 
     @Column(nullable = false)
-    private int stock;
+    private long stock;
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
 
-    public static ProductStock create(Long productId, int stock) {
+    public static ProductStock create(Long productId, long stock) {
         return ProductStock.builder()
                 .productId(productId)
                 .stock(stock)
                 .build();
     }
 
-    public void updateStock(int stock) {
+    public void updateStock(long stock) {
         this.stock = stock;
     }
 }

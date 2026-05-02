@@ -10,7 +10,7 @@ public record StockBatchReleaseRequest(
 ) {
     public record StockBatchReleaseItem(
             long productId,
-            @Min(1) @NotNull Integer quantity
+            @Min(1) @NotNull Long quantity
     ) {
     }
 }

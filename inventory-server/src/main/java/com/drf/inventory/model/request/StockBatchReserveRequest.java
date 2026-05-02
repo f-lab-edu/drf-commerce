@@ -10,7 +10,7 @@ public record StockBatchReserveRequest(
 ) {
     public record StockBatchReserveItem(
             long productId,
-            @Min(1) @NotNull Integer quantity
+            @Min(1) @NotNull Long quantity
     ) {
     }
 }

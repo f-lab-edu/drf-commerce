@@ -46,7 +46,7 @@ public class StockService {
         }
     }
 
-    private void reserveProductStock(long productId, int quantity) {
+    private void reserveProductStock(long productId, long quantity) {
         int result = stockRedisRepository.reserveStock(productId, quantity);
 
         if (result == -1) {
@@ -57,7 +57,7 @@ public class StockService {
         }
     }
 
-    private void releaseProductStock(long productId, int quantity) {
+    private void releaseProductStock(long productId, long quantity) {
         int result = stockRedisRepository.releaseStock(productId, quantity);
 
         if (result == -1) {
