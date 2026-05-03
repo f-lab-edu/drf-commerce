@@ -127,7 +127,7 @@ class InternalCouponFacadeTest {
         }
 
         @Test
-        @DisplayName("isBest가 true인 쿠폰은 응답에도 isBest: true")
+        @DisplayName("isBest가 true인 쿠폰은 응답에도 best: true")
         void isBest_propagatedFromCalculatorResult() {
             CartCouponResult cr = couponResult(5L, Money.of(2000));
             cr.markAsBest();
@@ -139,7 +139,7 @@ class InternalCouponFacadeTest {
             InternalProductCouponListResponse result =
                     internalCouponFacade.getAvailableProductCoupons(request(List.of()));
 
-            assertThat(result.coupons().getFirst().isBest()).isTrue();
+            assertThat(result.coupons().getFirst().best()).isTrue();
         }
 
         @Test

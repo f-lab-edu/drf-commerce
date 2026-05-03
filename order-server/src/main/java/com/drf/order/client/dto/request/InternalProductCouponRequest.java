@@ -10,7 +10,7 @@ public record InternalProductCouponRequest(
         long memberId,
         long cartItemId,
         long productId,
-        long price,
+        long lineAmount,
         int quantity,
         List<Long> categoryPath,
         List<Long> usedMemberCouponIds
@@ -23,7 +23,7 @@ public record InternalProductCouponRequest(
                 .memberId(memberId)
                 .cartItemId(request.cartItemId())
                 .productId(request.productId())
-                .price(request.price())
+                .lineAmount(request.lineAmount())
                 .quantity(request.quantity())
                 .categoryPath(request.categoryPath())
                 .usedMemberCouponIds(usedMemberCouponIds)

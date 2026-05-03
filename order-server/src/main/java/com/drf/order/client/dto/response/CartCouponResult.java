@@ -6,7 +6,7 @@ public record CartCouponResult(
         long memberCouponId,
         String name,
         int discountAmount,
-        boolean isBest,
+        boolean best,
         List<InternalCouponItemResult> items
 ) {
 }

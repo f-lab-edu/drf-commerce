@@ -12,17 +12,17 @@ public class CartCouponResult {
     private final String name;
     private final long discountAmount;
     private final List<InternalCouponItemResult> items;
-    private boolean isBest;
+    private boolean best;
 
     public CartCouponResult(long memberCouponId, String name, Money discountAmount, List<InternalCouponItemResult> items) {
         this.memberCouponId = memberCouponId;
         this.name = name;
         this.discountAmount = discountAmount.toLong();
-        this.isBest = false;
+        this.best = false;
         this.items = items;
     }
 
     public void markAsBest() {
-        this.isBest = true;
+        this.best = true;
     }
 }

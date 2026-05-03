@@ -45,7 +45,7 @@ public class InternalCouponFacade {
         MemberCoupon memberCoupon = internalCouponService.getUnusedMemberCoupon(memberId, memberCouponId);
 
         InternalCartCouponItemRequest item = new InternalCartCouponItemRequest(
-                request.cartItemId(), request.productId(), request.price(), request.quantity(), request.categoryPath());
+                request.cartItemId(), request.productId(), request.lineAmount(), request.quantity(), request.categoryPath());
 
         InternalCartCouponListResponse result = cartCouponCalculator.calculate(List.of(memberCoupon), List.of(item));
 
@@ -68,7 +68,7 @@ public class InternalCouponFacade {
         List<MemberCoupon> memberCoupons = internalCouponService.getUnusedCouponsByType(request.memberId(), ApplyType.PRODUCT);
 
         InternalCartCouponItemRequest item = new InternalCartCouponItemRequest(
-                request.cartItemId(), request.productId(), request.price(), request.quantity(), request.categoryPath());
+                request.cartItemId(), request.productId(), request.lineAmount(), request.quantity(), request.categoryPath());
 
         InternalCartCouponListResponse result = cartCouponCalculator.calculate(memberCoupons, List.of(item));
 

@@ -11,4 +11,10 @@ public record AmountResult(
         Money orderCouponDiscountAmount,
         Money deliveryFee,
         Money finalAmount) {
+
+    public AmountResult {
+        if (productDiscountAmount == null) productDiscountAmount = Money.ZERO;
+        if (productCouponDiscountAmount == null) productCouponDiscountAmount = Money.ZERO;
+        if (orderCouponDiscountAmount == null) orderCouponDiscountAmount = Money.ZERO;
+    }
 }

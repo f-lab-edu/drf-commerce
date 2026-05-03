@@ -4,7 +4,7 @@ public record ProductCouponResult(
         long memberCouponId,
         String name,
         int discountAmount,
-        boolean isBest,
+        boolean best,
         boolean usedOnOtherItem
 ) {
 }

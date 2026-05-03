@@ -27,7 +27,7 @@ public class OrderPricingService {
 
         // 상품 쿠폰 할인 총액
         Money productCouponDiscountAmount = lineItems.stream()
-                .map(OrderLineItem::getProductDiscountAmount)
+                .map(OrderLineItem::getProductCouponDiscount)
                 .reduce(Money.ZERO, Money::add);
 
         // 주문 쿠폰 할인 총액

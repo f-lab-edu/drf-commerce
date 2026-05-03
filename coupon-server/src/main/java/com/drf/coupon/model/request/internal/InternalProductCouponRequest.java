@@ -6,7 +6,7 @@ public record InternalProductCouponRequest(
         long memberId,
         long cartItemId,
         long productId,
-        long price,
+        long lineAmount,
         int quantity,
         List<Long> categoryPath,
         List<Long> usedMemberCouponIds

@@ -59,7 +59,7 @@ public class OrderCouponService {
                     .memberId(memberId)
                     .cartItemId(item.getCartItemId())
                     .productId(item.getProductId())
-                    .price(item.getDiscountedUnitPrice().toLong())
+                    .lineAmount(item.getLineAmount().toLong())
                     .quantity(item.getQuantity())
                     .categoryPath(item.getCategoryPath())
                     .usedMemberCouponIds(List.of())

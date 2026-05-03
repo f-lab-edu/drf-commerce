@@ -1,9 +1,12 @@
 package com.drf.order.service;
 
 import com.drf.common.model.Money;
+import com.drf.order.client.InventoryClient;
 import com.drf.order.client.ProductClient;
 import com.drf.order.client.dto.request.ProductBatchRequest;
+import com.drf.order.client.dto.request.StockBatchLookupRequest;
 import com.drf.order.client.dto.response.InternalProductResponse;
+import com.drf.order.client.dto.response.InternalStockResponse;
 import com.drf.order.model.request.CheckoutItemRequest;
 import com.drf.order.model.response.CheckoutAvailableItem;
 import com.drf.order.model.response.CheckoutResponse;
@@ -24,13 +27,19 @@ import java.util.stream.Collectors;
 public class CheckoutService {
 
     private final ProductClient productClient;
+    private final InventoryClient inventoryClient;
     private final DeliveryFeePolicy deliveryFeePolicy;
 
     public CheckoutResponse checkout(List<CheckoutItemRequest> items) {
-        ProductBatchRequest request = new ProductBatchRequest(items.stream().map(CheckoutItemRequest::productId).toList());
-        Map<Long, InternalProductResponse> productMap = productClient.getProductsBatch(request).getData()
+        List<Long> productIds = items.stream().map(CheckoutItemRequest::productId).toList();
+
+        Map<Long, InternalProductResponse> productMap = productClient.getProductsBatch(new ProductBatchRequest(productIds)).getData()
                 .stream()
                 .collect(Collectors.toMap(InternalProductResponse::id, Function.identity()));
+
+        Map<Long, Long> stockMap = inventoryClient.getAvailableStocks(new StockBatchLookupRequest(productIds)).getData()
+                .stream()
+                .collect(Collectors.toMap(InternalStockResponse::productId, InternalStockResponse::stock));
 
         List<CheckoutAvailableItem> availableItems = new ArrayList<>();
         List<CheckoutUnavailableItem> unavailableItems = new ArrayList<>();
@@ -46,12 +55,14 @@ public class CheckoutService {
                 continue;
             }
 
-            if (product.stock() == 0) {
+            long stock = stockMap.getOrDefault(item.productId(), 0L);
+
+            if (stock == 0) {
                 unavailableItems.add(CheckoutUnavailableItem.of(product.id(), product.name(), UnavailableReason.OUT_OF_STOCK));
                 continue;
             }
 
-            if (product.stock() < item.quantity()) {
+            if (stock < item.quantity()) {
                 unavailableItems.add(CheckoutUnavailableItem.of(product.id(), product.name(), UnavailableReason.INSUFFICIENT_STOCK));
                 continue;
             }

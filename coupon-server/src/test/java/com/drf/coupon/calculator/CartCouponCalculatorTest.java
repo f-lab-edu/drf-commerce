@@ -214,11 +214,11 @@ class CartCouponCalculatorTest {
     }
 
     @Nested
-    @DisplayName("isBest 마킹")
+    @DisplayName("best 마킹")
     class IsBestTest {
 
         @Test
-        @DisplayName("여러 쿠폰 중 할인금액이 가장 큰 쿠폰이 isBest, 내림차순 정렬")
+        @DisplayName("여러 쿠폰 중 할인금액이 가장 큰 쿠폰이 best, 내림차순 정렬")
         void isBest_markedOnHighestDiscount() {
             Coupon cheap = fixedCoupon(1000, Money.ZERO, 0, ApplyScope.ALL, null);
             Coupon expensive = Coupon.builder()
@@ -244,7 +244,7 @@ class CartCouponCalculatorTest {
         }
 
         @Test
-        @DisplayName("쿠폰이 하나면 그 쿠폰이 isBest")
+        @DisplayName("쿠폰이 하나면 그 쿠폰이 best")
         void isBest_singleCoupon() {
             Coupon coupon = fixedCoupon(3000, Money.ZERO, 0, ApplyScope.ALL, null);
             List<InternalCartCouponItemRequest> items = List.of(item(1L, 1L, 50000, 1, List.of(10L)));

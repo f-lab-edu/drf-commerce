@@ -52,7 +52,7 @@ public class CouponFacade {
 
     public ProductCouponApplyResponse applyProductCoupon(long memberId, long productId, long memberCouponId, ProductCouponApplyRequest request) {
         InternalProductCouponRequest couponRequest = new InternalProductCouponRequest(
-                memberId, request.cartItemId(), productId, request.price(), request.quantity(), request.categoryPath(), List.of());
+                memberId, request.cartItemId(), productId, request.lineAmount(), request.quantity(), request.categoryPath(), List.of());
         ProductCouponCalculateResponse result = couponClient.calculateProductCoupon(memberCouponId, couponRequest).getData();
 
         if (!result.applicable()) {
@@ -66,7 +66,7 @@ public class CouponFacade {
     private List<InternalCartCouponItemRequest> toInternalRequests(List<CartCouponAvailableRequest> items) {
         return items.stream()
                 .map(i -> new InternalCartCouponItemRequest(
-                        i.cartItemId(), i.productId(), i.price(), i.quantity(), i.categoryPath()))
+                        i.cartItemId(), i.productId(), i.lineAmount(), i.quantity(), i.categoryPath()))
                 .toList();
     }
 }

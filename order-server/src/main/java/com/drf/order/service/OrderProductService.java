@@ -1,6 +1,7 @@
 package com.drf.order.service;
 
 import com.drf.common.exception.BusinessException;
+import com.drf.order.client.InventoryClient;
 import com.drf.order.client.ProductClient;
 import com.drf.order.client.dto.request.ProductBatchRequest;
 import com.drf.order.client.dto.request.StockBatchReleaseRequest;
@@ -27,6 +28,7 @@ public class OrderProductService {
 
 
     private final ProductClient productClient;
+    private final InventoryClient inventoryClient;
 
     public List<OrderLineItem> getOrderLineItems(List<CartItem> cartItems) {
         List<Long> productIds = cartItems.stream().map(CartItem::getProductId).toList();
@@ -52,7 +54,7 @@ public class OrderProductService {
     }
 
     public void reserveStocks(List<OrderLineItem> lineItems, String idempotencyKey) {
-        productClient.reserveStock(idempotencyKey + STOCK_RESERVE_KEY_SUFFIX,
+        inventoryClient.reserveStock(idempotencyKey + STOCK_RESERVE_KEY_SUFFIX,
                 new StockBatchReserveRequest(lineItems.stream()
                         .map(item -> new StockBatchReserveRequest.StockBatchReserveItem(item.getProductId(), item.getQuantity()))
                         .toList()));
@@ -60,7 +62,7 @@ public class OrderProductService {
 
     public void releaseStocks(List<OrderLineItem> lineItems, String idempotencyKey) {
         try {
-            productClient.releaseStock(idempotencyKey + STOCK_RELEASE_KEY_SUFFIX,
+            inventoryClient.releaseStock(idempotencyKey + STOCK_RELEASE_KEY_SUFFIX,
                     new StockBatchReleaseRequest(lineItems.stream()
                             .map(item -> new StockBatchReleaseRequest.StockBatchReleaseItem(item.getProductId(), item.getQuantity()))
                             .toList()));

@@ -14,7 +14,6 @@ public record InternalProductResponse(
         long discountedPrice,
         long categoryId,
         List<Long> categoryPath,
-        ProductStatus status,
-        int stock
+        ProductStatus status
 ) {
 }

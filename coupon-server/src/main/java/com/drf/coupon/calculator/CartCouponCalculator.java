@@ -68,7 +68,7 @@ public class CartCouponCalculator {
             results.add(new CartCouponResult(mc.getId(), coupon.getName(), discountAmount, itemResults));
         }
 
-        // 할인금액 내림차순 정렬 후 가장 유리한 쿠폰에 isBest 마킹
+        // 할인금액 내림차순 정렬 후 가장 유리한 쿠폰에 best 마킹
         results.sort(Comparator.comparingLong(CartCouponResult::getDiscountAmount).reversed());
         if (!results.isEmpty()) {
             results.getFirst().markAsBest();
@@ -103,8 +103,7 @@ public class CartCouponCalculator {
                 if (processedCount == totalApplicable) {
                     itemDiscount = discountAmount.subtract(distributed);
                 } else {
-                    Money itemAmount = Money.of(item.price()).multiply(item.quantity());
-                    itemDiscount = discountAmount.proportionOf(itemAmount, applicableAmount);
+                    itemDiscount = discountAmount.proportionOf(Money.of(item.lineAmount()), applicableAmount);
                 }
                 distributed = distributed.add(itemDiscount);
             }
@@ -122,7 +121,7 @@ public class CartCouponCalculator {
 
     private Money calculateApplicableAmount(List<InternalCartCouponItemRequest> items) {
         return items.stream()
-                .map(i -> Money.of(i.price()).multiply(i.quantity()))
+                .map(i -> Money.of(i.lineAmount()))
                 .reduce(Money.ZERO, Money::add);
     }
 

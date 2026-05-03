@@ -2,19 +2,25 @@ package com.drf.order.service;
 
 import com.drf.common.model.CommonResponse;
 import com.drf.common.model.Money;
+import com.drf.order.client.InventoryClient;
 import com.drf.order.client.ProductClient;
 import com.drf.order.client.dto.request.ProductBatchRequest;
+import com.drf.order.client.dto.request.StockBatchLookupRequest;
 import com.drf.order.client.dto.response.InternalProductResponse;
+import com.drf.order.client.dto.response.InternalStockResponse;
 import com.drf.order.model.request.CheckoutItemRequest;
 import com.drf.order.model.response.CheckoutResponse;
 import com.drf.order.model.response.CheckoutUnavailableItem.UnavailableReason;
 import com.drf.order.model.type.ProductStatus;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.List;
 
@@ -23,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class CheckoutServiceTest {
 
     @InjectMocks
@@ -32,14 +39,27 @@ class CheckoutServiceTest {
     private ProductClient productClient;
 
     @Mock
+    private InventoryClient inventoryClient;
+
+    @Mock
     private DeliveryFeePolicy deliveryFeePolicy;
+
+    @BeforeEach
+    public void setup() {
+        InternalStockResponse stock = new InternalStockResponse(1L, 100);
+
+        given(inventoryClient.getAvailableStocks(any(StockBatchLookupRequest.class)))
+                .willReturn(CommonResponse.success(List.of(stock)));
+    }
 
     @Test
     @DisplayName("구매 가능한 상품은 availableItems에 포함되고 소계가 올바르게 계산된다")
     void checkout_availableItems() {
-        InternalProductResponse product = product(1L, 10000L, 8000L, 10, ProductStatus.ON_SALE);
+        InternalProductResponse product = product(1L, 10000L, 8000L, ProductStatus.ON_SALE);
+
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(product)));
+
         given(deliveryFeePolicy.calculateFee(any())).willReturn(Money.of(3000));
 
         CheckoutResponse response = checkoutService.checkout(List.of(new CheckoutItemRequest(1L, 2)));
@@ -52,9 +72,11 @@ class CheckoutServiceTest {
     @Test
     @DisplayName("주문금액이 무료배송 기준 이상이면 배송비가 0이다")
     void checkout_freeShipping() {
-        InternalProductResponse product = product(1L, 60000L, 60000L, 10, ProductStatus.ON_SALE);
+        InternalProductResponse product = product(1L, 60000L, 60000L, ProductStatus.ON_SALE);
+
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(product)));
+
         given(deliveryFeePolicy.calculateFee(any())).willReturn(Money.ZERO);
 
         CheckoutResponse response = checkoutService.checkout(List.of(new CheckoutItemRequest(1L, 1)));
@@ -66,9 +88,11 @@ class CheckoutServiceTest {
     @Test
     @DisplayName("주문금액이 무료배송 기준 미만이면 배송비가 부과된다")
     void checkout_shippingFee() {
-        InternalProductResponse product = product(1L, 10000L, 10000L, 10, ProductStatus.ON_SALE);
+        InternalProductResponse product = product(1L, 10000L, 10000L, ProductStatus.ON_SALE);
+
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(product)));
+
         given(deliveryFeePolicy.calculateFee(any())).willReturn(Money.of(3000));
 
         CheckoutResponse response = checkoutService.checkout(List.of(new CheckoutItemRequest(1L, 1)));
@@ -93,7 +117,7 @@ class CheckoutServiceTest {
     @Test
     @DisplayName("판매 중이 아닌 상품은 NOT_ON_SALE로 unavailableItems에 추가된다")
     void checkout_productNotOnSale() {
-        InternalProductResponse product = product(1L, 10000L, 10000L, 10, ProductStatus.READY);
+        InternalProductResponse product = product(1L, 10000L, 10000L, ProductStatus.READY);
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(product)));
 
@@ -106,9 +130,14 @@ class CheckoutServiceTest {
     @Test
     @DisplayName("재고가 0인 상품은 OUT_OF_STOCK으로 unavailableItems에 추가된다")
     void checkout_outOfStock() {
-        InternalProductResponse product = product(1L, 10000L, 10000L, 0, ProductStatus.ON_SALE);
+        InternalProductResponse product = product(1L, 10000L, 10000L, ProductStatus.ON_SALE);
+        InternalStockResponse stock = new InternalStockResponse(1L, 0);
+
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(product)));
+
+        given(inventoryClient.getAvailableStocks(any(StockBatchLookupRequest.class)))
+                .willReturn(CommonResponse.success(List.of(stock)));
 
         CheckoutResponse response = checkoutService.checkout(List.of(new CheckoutItemRequest(1L, 1)));
 
@@ -119,9 +148,14 @@ class CheckoutServiceTest {
     @Test
     @DisplayName("재고가 요청 수량보다 적으면 INSUFFICIENT_STOCK으로 unavailableItems에 추가된다")
     void checkout_insufficientStock() {
-        InternalProductResponse product = product(1L, 10000L, 10000L, 2, ProductStatus.ON_SALE);
+        InternalProductResponse product = product(1L, 10000L, 10000L, ProductStatus.ON_SALE);
+        InternalStockResponse stock = new InternalStockResponse(1L, 1);
+
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(product)));
+
+        given(inventoryClient.getAvailableStocks(any(StockBatchLookupRequest.class)))
+                .willReturn(CommonResponse.success(List.of(stock)));
 
         CheckoutResponse response = checkoutService.checkout(List.of(new CheckoutItemRequest(1L, 5)));
 
@@ -132,8 +166,8 @@ class CheckoutServiceTest {
     @Test
     @DisplayName("가용 상품과 불가 상품이 섞여 있으면 각각 올바른 목록에 분류된다")
     void checkout_mixedItems() {
-        InternalProductResponse available = product(1L, 10000L, 10000L, 10, ProductStatus.ON_SALE);
-        InternalProductResponse unavailable = product(2L, 5000L, 5000L, 0, ProductStatus.ON_SALE);
+        InternalProductResponse available = product(1L, 10000L, 10000L, ProductStatus.ON_SALE);
+        InternalProductResponse unavailable = product(2L, 5000L, 5000L, ProductStatus.ON_SALE);
         given(productClient.getProductsBatch(any(ProductBatchRequest.class)))
                 .willReturn(CommonResponse.success(List.of(available, unavailable)));
         given(deliveryFeePolicy.calculateFee(any())).willReturn(Money.of(3000));
@@ -149,7 +183,8 @@ class CheckoutServiceTest {
         assertThat(response.unavailableItems().getFirst().productId()).isEqualTo(2L);
     }
 
-    private InternalProductResponse product(long id, long price, long discountedPrice, int stock, ProductStatus status) {
-        return new InternalProductResponse(id, "상품" + id, "", price, 0, 0L, discountedPrice, 1L, List.of(), status, stock);
+    private InternalProductResponse product(long id, long price, long discountedPrice, ProductStatus status) {
+        return new InternalProductResponse(id, "상품" + id, "", price, 0,
+                0L, discountedPrice, 1L, List.of(), status);
     }
 }

@@ -15,4 +15,8 @@ public record OrderItemData(
         Money finalAmount,
         Long memberCouponId
 ) {
+    public OrderItemData {
+        if (productCouponDiscountAmount == null) productCouponDiscountAmount = Money.ZERO;
+        if (orderCouponDiscountAmount == null) orderCouponDiscountAmount = Money.ZERO;
+    }
 }
